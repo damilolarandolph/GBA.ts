@@ -1,0 +1,19 @@
+# Foobar
+
+GBA.ts is a Gameboy Advance emulator written in Typescript.
+
+## Installation
+
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+
+```bash
+pip install foobar
+```
+
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
