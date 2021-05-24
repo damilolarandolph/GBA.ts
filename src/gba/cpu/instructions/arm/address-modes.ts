@@ -1,7 +1,10 @@
-import { getBit, getBits } from "../../../utils/bits";
+import { countSetBits, getBit, getBits } from "../../../utils/bits";
 import { uint32 } from "../../../utils/types";
 import { ARM7CPU } from "../../cpu";
 import { StatusFlags } from "../../registers";
+import { testCondition } from "../instructions";
+
+export type dataProcFunc = (instruction: uint32, cpu: ARM7CPU) => [number, boolean];
 
 export function dataProcImmediate(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
     let immed8 = uint32(getBits(instruction, 7, 0));
@@ -13,7 +16,7 @@ export function dataProcImmediate(instruction: uint32, cpu: ARM7CPU): [number, b
 export function dataProcRegister(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
     let regNo = uint32(getBits(instruction, 3, 0));
     let operand = cpu.readRegister(regNo);
-    let carryOut = cpu.getCPSR().getFlag(StatusFlags.CARRY);
+    let carryOut = cpu.CPSR.getFlag(StatusFlags.CARRY);
 
     return [operand, carryOut];
 }
@@ -97,7 +100,7 @@ export function rorr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
     let rsVal = cpu.readRegister(rs);
 
     if ((rsVal & 0xff) == 0) {
-        return [rmVal, cpu.getCPSR().getFlag(StatusFlags.CARRY)]
+        return [rmVal, cpu.CPSR.getFlag(StatusFlags.CARRY)]
     }
 
     if ((rsVal & 0x1f) == 0) {
@@ -109,7 +112,7 @@ export function rorr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
 }
 
 export function rrx(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
-    let cFlag = cpu.getCPSR().getFlag(StatusFlags.CARRY) ? uint32(1) : uint32(0);
+    let cFlag = cpu.CPSR.getFlag(StatusFlags.CARRY) ? uint32(1) : uint32(0);
     let result = (cFlag << 31) | (amount >> 1);
     return [result, getBit(bits, 0)];
 }
@@ -119,7 +122,7 @@ export function rrx(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 // Arithmetic shift right
 export function asr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
     if (amount == 0) {
-        return [bits, cpu.getCPSR().getFlag(StatusFlags.CARRY)];
+        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
     }
 
     if (amount < 32) {
@@ -140,7 +143,7 @@ export function asr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 export function lsr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
 
     if (amount == 0) {
-        return [bits, cpu.getCPSR().getFlag(StatusFlags.CARRY)];
+        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
     }
 
     if (amount < 32) {
@@ -162,7 +165,7 @@ export function lsl(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 
 
     if (amount == 0) {
-        return [bits, cpu.getCPSR().getFlag(StatusFlags.CARRY)];
+        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
     }
 
     if (amount < 32) {
@@ -184,4 +187,293 @@ export function rotateRight(bits: uint32, amount: number, cpu: ARM7CPU): [number
         return [result, false];
 
     return [result, getBit(result, 31)];
+}
+
+export function postAddressingFunc() { }
+export function preAddressingFunc() { }
+export function immedOffRegAddr(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset12 = getBits(instruction, 11, 0);
+    if (getBit(instruction, 23)) {
+        return rnVal + offset12;
+    } else {
+        return rnVal - offset12;
+    }
+}
+
+export function regOffRegAddr(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let rm = getBits(instruction, 3, 0);
+    let rmVal = cpu.readRegister(rm);
+    if (getBit(instruction, 23)) {
+        return rnVal + rmVal;
+    } else {
+        return rnVal - rmVal;
+    }
+}
+
+export function scaledRegOff(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let shift = getBits(instruction, 6, 5);
+    let rnVal = cpu.readRegister(rn);
+    let index!: number;
+
+    switch (shift) {
+        case 0b00:
+            [index] = lsli(instruction, cpu);
+        case 0b01:
+            [index] = lsri(instruction, cpu);
+        case 0b10:
+            [index] = asri(instruction, cpu);
+        case 0b11:
+            [index] = rori(instruction, cpu);
+    }
+    if (getBit(instruction, 23)) {
+        return rnVal + index;
+    } else {
+        return rnVal - index;
+    }
+
+}
+
+export function immedPreIndexed(cpu: ARM7CPU): uint32 {
+
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset12 = getBits(instruction, 11, 0);
+    let address;
+    if (getBit(instruction, 23)) {
+        address = rnVal + offset12;
+    } else {
+        address = rnVal - offset12;
+    }
+    if (testCondition(cpu)) {
+        cpu.writeRegister(rn, address);
+    }
+    return address;
+}
+
+
+export function immedPostIndexed(cpu: ARM7CPU): uint32 {
+
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset12 = getBits(instruction, 11, 0);
+
+    if (testCondition(cpu)) {
+        if (getBit(instruction, 23)) {
+            cpu.writeRegister(rn, rnVal + offset12);
+        } else {
+            cpu.writeRegister(rn, rnVal - offset12);
+        }
+    }
+    return rnVal;
+}
+
+
+export function regOffPostIndexed(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let rm = getBits(instruction, 3, 0);
+    let rmVal = cpu.readRegister(rm);
+    if (testCondition(cpu)) {
+        if (getBit(instruction, 23)) {
+            cpu.writeRegister(rn, rnVal + rmVal);
+        } else {
+            cpu.writeRegister(rn, rnVal - rmVal);
+        }
+    }
+
+    return rnVal;
+}
+
+export function regOffPreIndexed(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let rm = getBits(instruction, 3, 0);
+    let rmVal = cpu.readRegister(rm);
+    let address;
+    if (getBit(instruction, 23)) {
+        address = rnVal + rmVal;
+    } else {
+        address = rnVal - rmVal;
+    }
+    if (testCondition(cpu)) {
+        cpu.writeRegister(rn, address);
+    }
+    return address;
+}
+
+
+
+
+export function scaledRegOffPreIndex(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let shift = getBits(instruction, 6, 5);
+    let rnVal = cpu.readRegister(rn);
+    let index!: number;
+
+    switch (shift) {
+        case 0b00:
+            [index] = lsli(instruction, cpu);
+        case 0b01:
+            [index] = lsri(instruction, cpu);
+        case 0b10:
+            [index] = asri(instruction, cpu);
+        case 0b11:
+            [index] = rori(instruction, cpu);
+    }
+    let address;
+    if (getBit(instruction, 23)) {
+        address = rnVal + index;
+    } else {
+        address = rnVal - index;
+    }
+
+    if (testCondition(cpu)) {
+        cpu.writeRegister(rn, address);
+    }
+
+    return address;
+
+}
+
+export function scaledRegOffPostIndex(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let shift = getBits(instruction, 6, 5);
+    let rnVal = cpu.readRegister(rn);
+    let index!: number;
+
+    switch (shift) {
+        case 0b00:
+            [index] = lsli(instruction, cpu);
+        case 0b01:
+            [index] = lsri(instruction, cpu);
+        case 0b10:
+            [index] = asri(instruction, cpu);
+        case 0b11:
+            [index] = rori(instruction, cpu);
+    }
+
+    if (testCondition(cpu)) {
+        if (getBit(instruction, 23)) {
+            cpu.writeRegister(rn, rnVal + index);
+        } else {
+            cpu.writeRegister(rn, rnVal - index);
+        }
+    }
+
+    return rnVal;
+}
+
+export function miscImmedOffset(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+
+    if (getBit(instruction, 23)) {
+        return rnVal + offset8;
+    } else {
+        return rnVal - offset8;
+    }
+}
+export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+    let address;
+    if (getBit(instruction, 23)) {
+        address = rnVal + offset8;
+    } else {
+        address = rnVal - offset8;
+    }
+
+    if (testCondition(cpu)) {
+        cpu.writeRegister(rn, address);
+    }
+
+    return address;
+}
+
+export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): uint32 {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+    if (testCondition(cpu)) {
+        if (getBit(instruction, 23)) {
+            cpu.writeRegister(rn, rnVal + offset8);
+        } else {
+            cpu.writeRegister(rn, rnVal - offset8);
+        }
+    }
+    return rnVal;
+}
+
+export function ldmIncrAfter(cpu: ARM7CPU): [uint32, uint32] {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let registerList = getBits(instruction, 15, 0);
+    let startAddress = rnVal;
+    let endAddress = rnVal + (countSetBits(registerList) * 4) - 4
+
+    if (testCondition(cpu) && getBit(instruction, 21)) {
+        cpu.writeRegister(rn, endAddress + 4);
+    }
+
+    return [startAddress, endAddress];
+}
+
+export function ldmIncrBefore(cpu: ARM7CPU): [uint32, uint32] {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let registerList = getBits(instruction, 15, 0);
+    let startAddress = rnVal + 4;
+    let endAddress = rnVal + (countSetBits(registerList) * 4)
+    if (testCondition(cpu) && getBit(instruction, 21)) {
+        cpu.writeRegister(rn, endAddress);
+    }
+
+    return [startAddress, endAddress];
+}
+
+export function ldmDecrAfter(cpu: ARM7CPU): [uint32, uint32] {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let registerList = getBits(instruction, 15, 0);
+    let startAddress = rnVal - (countSetBits(registerList) * 4) + 4
+    let endAddress = rnVal;
+    if (testCondition(cpu) && getBit(instruction, 21)) {
+        cpu.writeRegister(rn, startAddress - 4);
+    }
+    return [startAddress, endAddress];
+}
+
+export function ldmDecrBefor(cpu: ARM7CPU): [uint32, uint32] {
+    let instruction = cpu.currentInstruction;
+    let rn = getBits(instruction, 19, 16);
+    let rnVal = cpu.readRegister(rn);
+    let registerList = getBits(instruction, 15, 0);
+    let startAddress = rnVal - (countSetBits(registerList) * 4);
+    let endAddress = rnVal - 4;
+    if (testCondition(cpu) && getBit(instruction, 21)) {
+        cpu.writeRegister(rn, startAddress);
+    }
+    return [startAddress, endAddress];
 }
