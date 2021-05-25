@@ -1,20 +1,21 @@
 import { countSetBits, getBit, getBits } from "../../../utils/bits";
-import { uint32 } from "../../../utils/types";
 import { ARM7CPU } from "../../cpu";
 import { StatusFlags } from "../../registers";
 import { testCondition } from "../instructions";
 
-export type dataProcFunc = (instruction: uint32, cpu: ARM7CPU) => [number, boolean];
+export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];
 
-export function dataProcImmediate(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
-    let immed8 = uint32(getBits(instruction, 7, 0));
-    let rotateAmount = uint32(getBits(instruction, 11, 8));
+
+
+export function dataProcImmediate(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+    let immed8 = u32(getBits(instruction, 7, 0));
+    let rotateAmount = u32(getBits(instruction, 11, 8));
     let result = rotateRight(immed8, rotateAmount * 2, cpu);
     return result;
 }
 
-export function dataProcRegister(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
-    let regNo = uint32(getBits(instruction, 3, 0));
+export function dataProcRegister(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+    let regNo = u32(getBits(instruction, 3, 0));
     let operand = cpu.readRegister(regNo);
     let carryOut = cpu.CPSR.getFlag(StatusFlags.CARRY);
 
@@ -22,16 +23,16 @@ export function dataProcRegister(instruction: uint32, cpu: ARM7CPU): [number, bo
 }
 
 //Logical shift left with immediate
-export function lsli(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function lsli(instruction: u32, cpu: ARM7CPU): [number, boolean] {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
-    let shiftAmount = uint32(getBits(instruction, 11, 7));
+    let shiftAmount = u32(getBits(instruction, 11, 7));
     return lsl(rmVal, shiftAmount, cpu);
 }
 
 
 // Logical shift left with register
-export function lslr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function lslr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
 
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
@@ -42,17 +43,17 @@ export function lslr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
 }
 
 //Logical shift right with immediate
-export function lsri(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function lsri(instruction: u32, cpu: ARM7CPU): [number, boolean] {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
-    let shiftAmount = uint32(getBits(instruction, 11, 7));
+    let shiftAmount = u32(getBits(instruction, 11, 7));
     return lsr(rmVal, shiftAmount, cpu);
 }
 
 
 
 // Logical shift right with register
-export function lsrr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function lsrr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
 
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
@@ -62,7 +63,7 @@ export function lsrr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
 
 }
 // Arithmetic shift right by immediate
-export function asri(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function asri(instruction: u32, cpu: ARM7CPU): [number, boolean] {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
     let shiftImm = getBits(instruction, 11, 7);
@@ -70,7 +71,7 @@ export function asri(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
 }
 
 //Arithmetic shift right by register
-export function asrr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function asrr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
     let rs = getBits(instruction, 11, 8);
@@ -78,7 +79,7 @@ export function asrr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
     return asr(rmVal, rsVal, cpu);
 }
 // Rotate right by immediate
-export function rori(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function rori(instruction: u32, cpu: ARM7CPU): [number, boolean] {
 
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
@@ -93,7 +94,7 @@ export function rori(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
 }
 
 // Rotate right by register
-export function rorr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
+export function rorr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
     let rs = getBits(instruction, 11, 8);
@@ -108,11 +109,11 @@ export function rorr(instruction: uint32, cpu: ARM7CPU): [number, boolean] {
     }
 
     let operand = (rmVal << (31 - rsVal)) | rmVal >> rsVal;
-    return [operand, getBit(rmVal, uint32(rsVal & 0x1f) - 1)]
+    return [operand, getBit(rmVal, u32(rsVal & 0x1f) - 1)]
 }
 
-export function rrx(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
-    let cFlag = cpu.CPSR.getFlag(StatusFlags.CARRY) ? uint32(1) : uint32(0);
+export function rrx(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+    let cFlag = cpu.CPSR.getFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
     let result = (cFlag << 31) | (amount >> 1);
     return [result, getBit(bits, 0)];
 }
@@ -120,7 +121,7 @@ export function rrx(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 
 
 // Arithmetic shift right
-export function asr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function asr(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
     if (amount == 0) {
         return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
     }
@@ -140,7 +141,7 @@ export function asr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 
 
 //Logical shift right
-export function lsr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function lsr(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
 
     if (amount == 0) {
         return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
@@ -161,7 +162,7 @@ export function lsr(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
 }
 
 // Logical shift left
-export function lsl(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function lsl(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
 
 
     if (amount == 0) {
@@ -180,7 +181,7 @@ export function lsl(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolea
     return [0, false];
 }
 
-export function rotateRight(bits: uint32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function rotateRight(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
     let result = (bits << (31 - amount)) | bits >> amount;
 
     if (amount == 0)
@@ -191,7 +192,7 @@ export function rotateRight(bits: uint32, amount: number, cpu: ARM7CPU): [number
 
 export function postAddressingFunc() { }
 export function preAddressingFunc() { }
-export function immedOffRegAddr(cpu: ARM7CPU): uint32 {
+export function immedOffRegAddr(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -203,7 +204,7 @@ export function immedOffRegAddr(cpu: ARM7CPU): uint32 {
     }
 }
 
-export function regOffRegAddr(cpu: ARM7CPU): uint32 {
+export function regOffRegAddr(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -216,7 +217,7 @@ export function regOffRegAddr(cpu: ARM7CPU): uint32 {
     }
 }
 
-export function scaledRegOff(cpu: ARM7CPU): uint32 {
+export function scaledRegOff(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let shift = getBits(instruction, 6, 5);
@@ -241,7 +242,7 @@ export function scaledRegOff(cpu: ARM7CPU): uint32 {
 
 }
 
-export function immedPreIndexed(cpu: ARM7CPU): uint32 {
+export function immedPreIndexed(cpu: ARM7CPU): u32 {
 
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
@@ -260,7 +261,7 @@ export function immedPreIndexed(cpu: ARM7CPU): uint32 {
 }
 
 
-export function immedPostIndexed(cpu: ARM7CPU): uint32 {
+export function immedPostIndexed(cpu: ARM7CPU): u32 {
 
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
@@ -278,7 +279,7 @@ export function immedPostIndexed(cpu: ARM7CPU): uint32 {
 }
 
 
-export function regOffPostIndexed(cpu: ARM7CPU): uint32 {
+export function regOffPostIndexed(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -295,7 +296,7 @@ export function regOffPostIndexed(cpu: ARM7CPU): uint32 {
     return rnVal;
 }
 
-export function regOffPreIndexed(cpu: ARM7CPU): uint32 {
+export function regOffPreIndexed(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -316,7 +317,7 @@ export function regOffPreIndexed(cpu: ARM7CPU): uint32 {
 
 
 
-export function scaledRegOffPreIndex(cpu: ARM7CPU): uint32 {
+export function scaledRegOffPreIndex(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let shift = getBits(instruction, 6, 5);
@@ -348,7 +349,7 @@ export function scaledRegOffPreIndex(cpu: ARM7CPU): uint32 {
 
 }
 
-export function scaledRegOffPostIndex(cpu: ARM7CPU): uint32 {
+export function scaledRegOffPostIndex(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let shift = getBits(instruction, 6, 5);
@@ -377,7 +378,7 @@ export function scaledRegOffPostIndex(cpu: ARM7CPU): uint32 {
     return rnVal;
 }
 
-export function miscImmedOffset(cpu: ARM7CPU): uint32 {
+export function miscImmedOffset(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -389,7 +390,7 @@ export function miscImmedOffset(cpu: ARM7CPU): uint32 {
         return rnVal - offset8;
     }
 }
-export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): uint32 {
+export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -408,7 +409,7 @@ export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): uint32 {
     return address;
 }
 
-export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): uint32 {
+export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): u32 {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -423,7 +424,7 @@ export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): uint32 {
     return rnVal;
 }
 
-export function ldmIncrAfter(cpu: ARM7CPU): [uint32, uint32] {
+export function ldmIncrAfter(cpu: ARM7CPU): [u32, u32] {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -438,7 +439,7 @@ export function ldmIncrAfter(cpu: ARM7CPU): [uint32, uint32] {
     return [startAddress, endAddress];
 }
 
-export function ldmIncrBefore(cpu: ARM7CPU): [uint32, uint32] {
+export function ldmIncrBefore(cpu: ARM7CPU): [u32, u32] {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -452,7 +453,7 @@ export function ldmIncrBefore(cpu: ARM7CPU): [uint32, uint32] {
     return [startAddress, endAddress];
 }
 
-export function ldmDecrAfter(cpu: ARM7CPU): [uint32, uint32] {
+export function ldmDecrAfter(cpu: ARM7CPU): [u32, u32] {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
@@ -465,7 +466,7 @@ export function ldmDecrAfter(cpu: ARM7CPU): [uint32, uint32] {
     return [startAddress, endAddress];
 }
 
-export function ldmDecrBefor(cpu: ARM7CPU): [uint32, uint32] {
+export function ldmDecrBefor(cpu: ARM7CPU): [u32, u32] {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);

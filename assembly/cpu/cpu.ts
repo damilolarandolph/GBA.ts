@@ -1,9 +1,8 @@
 import MemoryAccessor from '../memory/memory-accessor';
 import { MemoryMap } from '../memory/memory-map';
 import Queue from '../utils/queue';
-import { uint16, uint32, uint8 } from '../utils/types';
 import { InstructionHandler } from './instructions/instructions';
-import { RegisterBank } from './registers';
+import { CPSR, RegisterBank, StatusFlags } from './registers';
 
 export enum CPU_MODES {
 
@@ -22,20 +21,21 @@ type ExecPiplineFunc = () => void;
 
 
 export class ARM7CPU implements MemoryAccessor {
-    private _registerBank = new RegisterBank();
-    private _instructionQueue = new Queue<ExecPiplineFunc | null>(30);
+    private _registerBank: RegisterBank = new RegisterBank();
+    private _instructionQueue: Queue<ExecPiplineFunc> = new Queue<ExecPiplineFunc>(30);
     private _memoryMap: MemoryMap;
-    private _currentInstruction: uint32 = 0;
+    private _currentInstruction: u32 = 0;
+
 
     constructor(memoryMap: MemoryMap) {
         this._memoryMap = memoryMap;
     }
 
-    enqueuePipeline(func: ExecPiplineFunc | null) {
+    enqueuePipeline(func: ExecPiplineFunc) {
         this._instructionQueue.enqueue(func);
     }
 
-    dequeuePipeline(): ExecPiplineFunc | null {
+    dequeuePipeline(): ExecPiplineFunc {
         return this._instructionQueue.dequeue();
     }
 
@@ -43,64 +43,65 @@ export class ARM7CPU implements MemoryAccessor {
         return this._registerBank;
     }
 
-    get currentInstruction(): uint32 {
+    get currentInstruction(): u32 {
         return this._currentInstruction;
     }
 
-    readRegister(regNo: number): uint32 {
+    readRegister(regNo: number): u32 {
         return this._registerBank.getRegister(regNo).read();
     }
 
-    writeRegister(regNo: number, val: uint32) {
+    writeRegister(regNo: number, val: u32) {
         this._registerBank.getRegister(regNo).write(val);
     }
 
-    readPC16() {
 
-    }
-
-    readPC32() {
-
-    }
-
-    getPC() {
-
-    }
-
-    get CPSR() {
+    get CPSR(): CPSR {
         return this._registerBank.getCPSR();
+    }
+
+
+    isFlag(flag: StatusFlags): boolean {
+        return this._registerBank.getCPSR().getFlag(flag);
+    }
+
+    flagVal(flag: StatusFlags): u32 {
+        return this.isFlag(flag) ? u32(1) : u32(0);
+    }
+
+    setFlag(flag: StatusFlags, value: boolean): void {
+        this._registerBank.getCPSR().setFlag(flag, value);
     }
 
     /*    get SPSR() {
     
         } */
 
-    addWaitStates(val: number) {
-        for (; val > 0; --val)
-            this.enqueuePipeline(null);
+    addWaitStates(val: number): void {
+
     }
 
-    read32(address: uint32): uint32 {
+    read32(address: u32): u32 {
         return this._memoryMap.read32(address, this);
     }
 
-    read16(address: uint32): uint16 {
+    read16(address: u32): u16 {
         return this._memoryMap.read16(address, this);
     }
 
-    read8(address: uint32): uint8 {
+    read8(address: u32): u8 {
         return this._memoryMap.read8(address, this);
     }
 
-    write8(address: uint32, value: uint8) {
+    write8(address: u32, value: u8): void {
         return this._memoryMap.write8(address, this, value);
     }
 
-    write16(address: uint32, value: uint16) {
+    write16(address: u32, value: u16): void {
         return this._memoryMap.write16(address, this, value)
     }
 
-    write32(address: uint32, value: uint32) {
+    write32(address: u32, value: u32): void {
         return this._memoryMap.write32(address, this, value);
     }
 

@@ -6,10 +6,10 @@ export default class Queue<T>{
     private items: number = 0;
 
     constructor(size: number) {
-        this.data = Array(size);
+        this.data = new Array(size);
     }
 
-    public enqueue(data: T) {
+    public enqueue(data: T): void {
 
         if (this.items == this.data.length) {
             throw new Error("Can't enqueue, queue is full");
@@ -33,7 +33,7 @@ export default class Queue<T>{
         return this.items == 0;
     }
 
-    public flush() {
+    public flush(): void {
         this.items = 0;
         this.startNeedle = this.endNeedle = 0;
     }

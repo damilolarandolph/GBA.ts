@@ -1,104 +1,103 @@
 import { getBit, setBit } from '../utils/bits';
-import { uint32 } from '../utils/types';
 import { CPU_MODES } from './cpu';
 export class RegisterBank {
 
-    private registers: Record<number, Array<Register>> = {
-        [CPU_MODES.USR]: [
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-        ],
-        [CPU_MODES.FIQ]: [
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-            new Register(),
-        ],
-        [CPU_MODES.SVC]: [
-            new Register(),
-            new Register()
-        ],
-        [CPU_MODES.ABT]: [
-            new Register(),
-            new Register()
-        ],
-        [CPU_MODES.IRQ]: [
-            new Register(),
-            new Register()
-        ],
-        [CPU_MODES.UND]: [
-            new Register(),
-            new Register(),
-        ]
-    }
+    private registers: Map<i32, Array<Register>> = new Map();
 
     constructor() {
-        this.registers[CPU_MODES.SYS] = this.registers[CPU_MODES.USR];
+
+        this.registers.set(CPU_MODES.USR, [
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+        ])
+
+        this.registers.set(CPU_MODES.FIQ, [
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+            new Register(),
+        ])
+        this.registers.set(CPU_MODES.SVC, [
+            new Register(),
+            new Register()
+        ])
+        this.registers.set(CPU_MODES.ABT, [
+            new Register(),
+            new Register()
+        ])
+        this.registers.set(CPU_MODES.IRQ, [
+            new Register(),
+            new Register()
+        ])
+        this.registers.set(CPU_MODES.UND, [
+            new Register(),
+            new Register(),
+        ])
+        this.registers.set(CPU_MODES.SYS, this.registers.get(CPU_MODES.USR));
+        this.SPSRs.set(CPU_MODES.ABT, new SPSR());
+        this.SPSRs.set(CPU_MODES.FIQ, new SPSR());
+        this.SPSRs.set(CPU_MODES.IRQ, new SPSR());
+        this.SPSRs.set(CPU_MODES.SVC, new SPSR());
+        this.SPSRs.set(CPU_MODES.UND, new SPSR());
     }
 
     private CPSR = new CPSR();
 
-    private SPSRs: Record<number, SPSR> = {
-        [CPU_MODES.ABT]: new SPSR(),
-        [CPU_MODES.FIQ]: new SPSR(),
-        [CPU_MODES.IRQ]: new SPSR(),
-        [CPU_MODES.SVC]: new SPSR(),
-        [CPU_MODES.UND]: new SPSR(),
-    }
+    private SPSRs: Map<number, SPSR> = new Map();
 
     getRegister(regNo: number): Register {
         let mode = this.CPSR.getMode();
         if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
             let index = regNo - 8;
-            return this.registers[CPU_MODES.FIQ][index];
+            return this.registers.get(CPU_MODES.FIQ)[index];
         }
 
         if ((mode != CPU_MODES.USR && mode != CPU_MODES.SYS) && regNo >= 13 && regNo < 15) {
             let index = regNo - 13;
-            return this.registers[mode][index];
+            return this.registers.get(mode)[index];
         }
 
-        return this.registers[CPU_MODES.USR][regNo];
+        return this.registers.get(CPU_MODES.USR)[regNo];
     }
 
     swapToSPSR(newMode: CPU_MODES) {
-        this.SPSRs[newMode].write(this.CPSR.read());
+        this.SPSRs.get(newMode).write(this.CPSR.read());
         this.CPSR.setMode(newMode);
     }
 
     swapFromSPSR() {
         let mode = this.CPSR.getMode();
-        this.CPSR.write(this.SPSRs[mode].read());
+        this.CPSR.write(this.SPSRs.get(mode).read());
     }
 
-    getCPSR() {
+    getCPSR(): CPSR {
         return this.CPSR;
     }
 }
 
 
-class Register {
-    protected data: uint32 = uint32(0);
+export class Register {
+    protected data: u32 = 0;
 
-    read(): uint32 {
+    read(): u32 {
         return this.data;
     }
-    write(val: uint32) {
+    write(val: u32) {
         this.data = val;
     }
 }
@@ -113,7 +112,7 @@ export enum StatusFlags {
     THUMB_MODE = 5
 }
 
-class CPSR extends Register {
+export class CPSR extends Register {
     getMode(): CPU_MODES {
         let mode = this.data & 0x1f;
         switch (mode) {

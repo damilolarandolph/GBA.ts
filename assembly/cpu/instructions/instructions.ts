@@ -1,13 +1,10 @@
 import { getBits } from '../../utils/bits';
-import { uint32 } from '../../utils/types';
 import { ARM7CPU } from '../cpu';
 import { StatusFlags } from '../registers';
 
 export type InstructionHandler = (cpu: ARM7CPU) => void;
 
 
-export const armInstructions: Record<number, Array<InstructionHandler>> = Array.from(new Array(256), _ => new Array(16));
-export const thumbInstructions: Record<number, Array<InstructionHandler>> = Array.from(new Array(16), _ => new Array(16));
 
 export function testCondition(cpu: ARM7CPU): boolean {
     let instruction = cpu.currentInstruction;
