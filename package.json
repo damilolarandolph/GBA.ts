@@ -7,14 +7,20 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@assemblyscript/loader": "^0.18.32",
     "@snowpack/plugin-typescript": "^1.2.1",
     "typescript": "^4.2.4"
   },
   "scripts": {
     "dev": "snowpack dev",
-    "build": "snowpack build"
+    "build": "snowpack build",
+    "asbuild:untouched": "asc assembly/index.ts --target debug",
+    "asbuild:optimized": "asc assembly/index.ts --target release",
+    "asbuild": "yarn asbuild:untouched && yarn asbuild:optimized",
+    "test": "node tests"
   },
   "devDependencies": {
+    "assemblyscript": "^0.18.32",
     "snowpack": "^3.5.1"
   }
 }
