@@ -1,4 +1,3 @@
-import { u16, u32, u8 } from "../utils/types";
 import MemoryAccessor from "./memory-accessor";
 
 export class MemoryMap {
@@ -19,15 +18,15 @@ export class MemoryMap {
         return 1;
     }
 
-    write8(address: u32, accessor: MemoryAccessor, value: u8) {
+    write8(address: u32, accessor: MemoryAccessor, value: u8): void {
 
     }
 
-    write16(address: u32, accessor: MemoryAccessor, value: u16) {
+    write16(address: u32, accessor: MemoryAccessor, value: u16): void {
 
     }
 
-    write32(address: u32, accessor: MemoryAccessor, value: u32) {
+    write32(address: u32, accessor: MemoryAccessor, value: u32): void {
 
     }
 
