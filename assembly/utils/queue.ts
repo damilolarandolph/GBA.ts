@@ -1,11 +1,11 @@
 export default class Queue<T>{
     private data: Array<T>;
-    private startNeedle: number = 0;
-    private endNeedle: number = 0;
+    private startNeedle: u32 = 0;
+    private endNeedle: u32 = 0;
 
     private items: number = 0;
 
-    constructor(size: number) {
+    constructor(size: i32) {
         this.data = new Array(size);
     }
 
@@ -24,7 +24,7 @@ export default class Queue<T>{
             throw new Error("Can't dequeue, queue is empty");
         }
         --this.items;
-        let res = this.data[this.endNeedle];
+        let res = this.data[this.startNeedle];
         this.startNeedle = (this.startNeedle + 1) % this.data.length;
         return res;
     }
