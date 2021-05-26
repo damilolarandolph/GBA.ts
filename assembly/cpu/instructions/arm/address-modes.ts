@@ -1,427 +1,535 @@
+import { escapeLeadingUnderscores } from "typescript";
 import { countSetBits, getBit, getBits } from "../../../utils/bits";
-import { ARM7CPU } from "../../cpu";
+import { ARM7CPU, CPU_MODES } from "../../cpu";
 import { StatusFlags } from "../../registers";
 import { testCondition } from "../instructions";
 
-export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];
+//export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];
 
-
-
-export function dataProcImmediate(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let immed8 = u32(getBits(instruction, 7, 0));
-    let rotateAmount = u32(getBits(instruction, 11, 8));
-    let result = rotateRight(immed8, rotateAmount * 2, cpu);
-    return result;
+export function dataProcImmediate(instruction: u32, cpu: ARM7CPU): void {
+    const stage = function (cpu: ARM7CPU) {
+        let immed8 = u32(getBits(instruction, 7, 0));
+        let rotateAmount = u32(getBits(instruction, 11, 8));
+        rotateRight(immed8, rotateAmount * 2, cpu);
+    }
+    cpu.enqueuePipeline(stage);
 }
 
-export function dataProcRegister(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let regNo = u32(getBits(instruction, 3, 0));
-    let operand = cpu.readRegister(regNo);
-    let carryOut = cpu.CPSR.getFlag(StatusFlags.CARRY);
+export function dataProcRegister(cpu: ARM7CPU): void {
+    const stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let regNo = u32(getBits(instruction, 3, 0));
+        let operand = cpu.readRegister(regNo);
+        let carryOut = cpu.CPSR.getFlag(StatusFlags.CARRY);
+        cpu.enqueueData(operand);
+        cpu.enqueueData(u32(carryOut));
+    }
 
-    return [operand, carryOut];
+    cpu.enqueuePipeline(stage);
 }
 
 //Logical shift left with immediate
-export function lsli(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let shiftAmount = u32(getBits(instruction, 11, 7));
-    return lsl(rmVal, shiftAmount, cpu);
+export function lsli(cpu: ARM7CPU): void {
+    let stage = function () {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let shiftAmount = u32(getBits(instruction, 11, 7));
+        lsl(rmVal, shiftAmount, cpu);
+    }
+
+    cpu.enqueuePipeline(stage);
 }
 
 
 // Logical shift left with register
-export function lslr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+export function lslr(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let rs = getBits(instruction, 11, 8);
+        let rsVal = cpu.readRegister(rs) & 0xff;
+        lsl(rmVal, rsVal, cpu);
+    }
 
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let rs = getBits(instruction, 11, 8);
-    let rsVal = cpu.readRegister(rs) & 0xff;
-    return lsl(rmVal, rsVal, cpu);
+    cpu.enqueuePipeline(stage);
 
 }
 
 //Logical shift right with immediate
-export function lsri(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let shiftAmount = u32(getBits(instruction, 11, 7));
-    return lsr(rmVal, shiftAmount, cpu);
+export function lsri(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let shiftAmount = u32(getBits(instruction, 11, 7));
+        lsr(rmVal, shiftAmount, cpu);
+    }
+
+    cpu.enqueuePipeline(stage);
 }
 
 
 
 // Logical shift right with register
-export function lsrr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+export function lsrr(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let rs = getBits(instruction, 11, 8);
+        let rsVal = cpu.readRegister(rs) & 0xff;
+        lsr(rmVal, rsVal, cpu);
+    }
 
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let rs = getBits(instruction, 11, 8);
-    let rsVal = cpu.readRegister(rs) & 0xff;
-    return lsr(rmVal, rsVal, cpu);
+    cpu.enqueuePipeline(stage);
 
 }
 // Arithmetic shift right by immediate
-export function asri(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let shiftImm = getBits(instruction, 11, 7);
-    return asr(rmVal, shiftImm, cpu);
+export function asri(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let shiftImm = getBits(instruction, 11, 7);
+        asr(rmVal, shiftImm, cpu);
+    }
+
+    cpu.enqueuePipeline(stage);
 }
 
 //Arithmetic shift right by register
-export function asrr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let rs = getBits(instruction, 11, 8);
-    let rsVal = cpu.readRegister(rs);
-    return asr(rmVal, rsVal, cpu);
+export function asrr(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let rs = getBits(instruction, 11, 8);
+        let rsVal = cpu.readRegister(rs);
+        asr(rmVal, rsVal, cpu);
+    }
+    cpu.enqueuePipeline(stage);
 }
 // Rotate right by immediate
-export function rori(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+export function rori(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let shiftImm = getBits(instruction, 11, 7);
+        if (shiftImm == 0) {
+            rrx(rmVal, shiftImm, cpu);
+            return;
+        }
 
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let shiftImm = getBits(instruction, 11, 7);
-    if (shiftImm == 0) {
-        return rrx(rmVal, shiftImm, cpu);
+        let operand = (rmVal << (31 - shiftImm)) | rmVal >> shiftImm;
+        cpu.enqueueData(operand);
+        cpu.enqueueData(u32(getBit(rmVal, shiftImm - 1)));
     }
-
-    let operand = (rmVal << (31 - shiftImm)) | rmVal >> shiftImm;
-    return [operand, getBit(rmVal, shiftImm - 1)];
-
+    cpu.enqueuePipeline(stage);
 }
 
 // Rotate right by register
-export function rorr(instruction: u32, cpu: ARM7CPU): [number, boolean] {
+export function rorr(instruction: u32, cpu: ARM7CPU): void {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
     let rs = getBits(instruction, 11, 8);
     let rsVal = cpu.readRegister(rs);
 
     if ((rsVal & 0xff) == 0) {
-        return [rmVal, cpu.CPSR.getFlag(StatusFlags.CARRY)]
+        cpu.enqueueData(rmVal);
+        cpu.enqueueData(cpu.flagVal(StatusFlags.CARRY));
+        return;
     }
 
     if ((rsVal & 0x1f) == 0) {
-        return [rmVal, getBit(rmVal, 31)];
+        cpu.enqueueData(rmVal);
+        cpu.enqueueData(u32(getBit(rmVal, 31)));
+        return;
     }
 
     let operand = (rmVal << (31 - rsVal)) | rmVal >> rsVal;
-    return [operand, getBit(rmVal, u32(rsVal & 0x1f) - 1)]
+    cpu.enqueueData(operand);
+    cpu.enqueueData(u32(getBit(rmVal, u32(rsVal & 0x1f) - 1)))
 }
 
-export function rrx(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function rrx(bits: u32, amount: number, cpu: ARM7CPU): void {
     let cFlag = cpu.CPSR.getFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
     let result = (cFlag << 31) | (amount >> 1);
-    return [result, getBit(bits, 0)];
+    cpu.enqueueData(result);
+    cpu.enqueueData(u32(getBit(bits, 0)));
 }
 
 
 
 // Arithmetic shift right
-export function asr(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function asr(bits: u32, amount: number, cpu: ARM7CPU): void {
     if (amount == 0) {
-        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
+        cpu.enqueueData(bits);
+        cpu.enqueueData(cpu.flagVal(StatusFlags.CARRY));
+        return;
     }
 
     if (amount < 32) {
         let result = bits >> amount;
         let carryOut = getBit(bits, amount - 1);
-        return [result, carryOut];
+        cpu.enqueueData(result);
+        cpu.enqueueData(u32(carryOut));
+        return;
     }
 
     if (!getBit(bits, 31)) {
-        return [0, getBit(bits, 31)];
+        cpu.enqueueData(0);
+        cpu.enqueueData(u32(getBit(bits, 31)));
+        return;
     }
-
-    return [0xFFFFFFFF, getBit(bits, 31)];
+    cpu.enqueueData(0xFFFFFFFF);
+    cpu.enqueueData(u32(getBit(bits, 31)));
 }
 
 
 //Logical shift right
-export function lsr(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function lsr(bits: u32, amount: number, cpu: ARM7CPU): void {
 
     if (amount == 0) {
-        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
+        cpu.enqueueData(bits);
+        cpu.enqueueData(cpu.flagVal(StatusFlags.CARRY));
     }
 
     if (amount < 32) {
         let shiftResult = bits >>> amount
         let carryOut = getBit(bits, amount - 1);
-        return [shiftResult, carryOut];
+        cpu.enqueueData(shiftResult);
+        cpu.enqueueData(u32(carryOut));
+        return;
     }
 
     if (amount == 32) {
-        return [0, getBit(bits, 31)];
+        cpu.enqueueData(0);
+        cpu.enqueueData(u32(getBit(bits, 32)))
+        return;
     }
 
-    return [0, false];
-
+    cpu.enqueueData(0);
+    cpu.enqueueData(0);
 }
 
 // Logical shift left
-export function lsl(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function lsl(bits: u32, amount: number, cpu: ARM7CPU): void {
 
 
     if (amount == 0) {
-        return [bits, cpu.CPSR.getFlag(StatusFlags.CARRY)];
+        cpu.enqueueData(bits);
+        cpu.enqueueData(cpu.flagVal(StatusFlags.CARRY));
+        return;
     }
 
     if (amount < 32) {
         let carryout = getBit(bits, 32 - amount);
-        return [bits << amount, carryout];
+        cpu.enqueueData(bits << amount);
+        cpu.enqueueData(u32(carryout));
+        return;
     }
 
     if (amount == 32) {
-        return [0, getBit(bits, 0)];
+        cpu.enqueueData(0);
+        cpu.enqueueData(u32(getBit(bits, 0)));
+        return;
     }
-
-    return [0, false];
+    cpu.enqueueData(0);
+    cpu.enqueueData(0);
 }
 
-export function rotateRight(bits: u32, amount: number, cpu: ARM7CPU): [number, boolean] {
+export function rotateRight(bits: u32, amount: number, cpu: ARM7CPU): void {
     let result = (bits << (31 - amount)) | bits >> amount;
 
-    if (amount == 0)
-        return [result, false];
+    if (amount == 0) {
+        cpu.enqueueData(result);
+        cpu.enqueueData(u32(false));
+        return;
+    }
 
-    return [result, getBit(result, 31)];
+    cpu.enqueueData(result);
+    cpu.enqueueData(u32(getBit(result, 32)))
+    return;
 }
 
-export function postAddressingFunc() { }
-export function preAddressingFunc() { }
-export function immedOffRegAddr(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset12 = getBits(instruction, 11, 0);
-    if (getBit(instruction, 23)) {
-        return rnVal + offset12;
-    } else {
-        return rnVal - offset12;
-    }
-}
-
-export function regOffRegAddr(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    if (getBit(instruction, 23)) {
-        return rnVal + rmVal;
-    } else {
-        return rnVal - rmVal;
-    }
-}
-
-export function scaledRegOff(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let shift = getBits(instruction, 6, 5);
-    let rnVal = cpu.readRegister(rn);
-    let index!: number;
-
-    switch (shift) {
-        case 0b00:
-            [index] = lsli(instruction, cpu);
-        case 0b01:
-            [index] = lsri(instruction, cpu);
-        case 0b10:
-            [index] = asri(instruction, cpu);
-        case 0b11:
-            [index] = rori(instruction, cpu);
-    }
-    if (getBit(instruction, 23)) {
-        return rnVal + index;
-    } else {
-        return rnVal - index;
-    }
-
-}
-
-export function immedPreIndexed(cpu: ARM7CPU): u32 {
-
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset12 = getBits(instruction, 11, 0);
-    let address;
-    if (getBit(instruction, 23)) {
-        address = rnVal + offset12;
-    } else {
-        address = rnVal - offset12;
-    }
-    if (testCondition(cpu)) {
-        cpu.writeRegister(rn, address);
-    }
-    return address;
-}
-
-
-export function immedPostIndexed(cpu: ARM7CPU): u32 {
-
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset12 = getBits(instruction, 11, 0);
-
-    if (testCondition(cpu)) {
+export function immedOffRegAddr(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset12 = getBits(instruction, 11, 0);
         if (getBit(instruction, 23)) {
-            cpu.writeRegister(rn, rnVal + offset12);
+            cpu.enqueueData(rnVal + offset12)
         } else {
-            cpu.writeRegister(rn, rnVal - offset12);
-        }
-    }
-    return rnVal;
-}
-
-
-export function regOffPostIndexed(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    if (testCondition(cpu)) {
-        if (getBit(instruction, 23)) {
-            cpu.writeRegister(rn, rnVal + rmVal);
-        } else {
-            cpu.writeRegister(rn, rnVal - rmVal);
+            cpu.enqueueData(rnVal - offset12)
         }
     }
 
-    return rnVal;
+    cpu.enqueuePipeline(stage);
 }
 
-export function regOffPreIndexed(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let rm = getBits(instruction, 3, 0);
-    let rmVal = cpu.readRegister(rm);
-    let address;
-    if (getBit(instruction, 23)) {
-        address = rnVal + rmVal;
-    } else {
-        address = rnVal - rmVal;
+export function regOffRegAddr(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        if (getBit(instruction, 23)) {
+            cpu.enqueueData(rnVal + rmVal);
+        } else {
+            cpu.enqueueData(rnVal - rmVal);
+        }
     }
-    if (testCondition(cpu)) {
-        cpu.writeRegister(rn, address);
+    cpu.enqueuePipeline(stage);
+}
+
+export function scaledRegOff(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let shift = getBits(instruction, 6, 5);
+        let rnVal = cpu.readRegister(rn);
+
+        switch (shift) {
+            case 0b00:
+                lsli(cpu);
+            case 0b01:
+                lsri(cpu);
+            case 0b10:
+                asri(cpu);
+            case 0b11:
+                rori(cpu);
+        }
+        cpu.dequeueData();
+        let index: u32 = cpu.dequeueData();
+        if (getBit(instruction, 23)) {
+            cpu.enqueueData(rnVal + index);
+        } else {
+            cpu.enqueueData(rnVal - index);
+        }
     }
-    return address;
+
+    cpu.enqueuePipeline(stage);
+}
+
+export function immedPreIndexed(cpu: ARM7CPU): void {
+    let stage = function () {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset12 = getBits(instruction, 11, 0);
+        let address;
+        if (getBit(instruction, 23)) {
+            address = rnVal + offset12;
+        } else {
+            address = rnVal - offset12;
+        }
+        if (testCondition(cpu)) {
+            cpu.writeRegister(rn, address);
+        }
+        cpu.enqueueData(address);
+    }
+
+    cpu.enqueuePipeline(stage);
+}
+
+
+export function immedPostIndexed(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset12 = getBits(instruction, 11, 0);
+
+        if (testCondition(cpu)) {
+            if (getBit(instruction, 23)) {
+                cpu.writeRegister(rn, rnVal + offset12);
+            } else {
+                cpu.writeRegister(rn, rnVal - offset12);
+            }
+        }
+        cpu.enqueueData(rnVal);
+    }
+
+    cpu.enqueuePipeline(stage);
+}
+
+
+export function regOffPostIndexed(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        if (testCondition(cpu)) {
+            if (getBit(instruction, 23)) {
+                cpu.writeRegister(rn, rnVal + rmVal);
+            } else {
+                cpu.writeRegister(rn, rnVal - rmVal);
+            }
+        }
+
+        cpu.enqueueData(rnVal);
+
+    }
+    cpu.enqueuePipeline(stage);
+}
+
+export function regOffPreIndexed(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let rm = getBits(instruction, 3, 0);
+        let rmVal = cpu.readRegister(rm);
+        let address;
+        if (getBit(instruction, 23)) {
+            address = rnVal + rmVal;
+        } else {
+            address = rnVal - rmVal;
+        }
+        if (testCondition(cpu)) {
+            cpu.writeRegister(rn, address);
+        }
+        cpu.enqueueData(address);
+    }
+
+    cpu.enqueuePipeline(stage);
 }
 
 
 
 
-export function scaledRegOffPreIndex(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let shift = getBits(instruction, 6, 5);
-    let rnVal = cpu.readRegister(rn);
-    let index!: number;
+export function scaledRegOffPreIndex(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU) {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let shift = getBits(instruction, 6, 5);
+        let rnVal = cpu.readRegister(rn);
 
-    switch (shift) {
-        case 0b00:
-            [index] = lsli(instruction, cpu);
-        case 0b01:
-            [index] = lsri(instruction, cpu);
-        case 0b10:
-            [index] = asri(instruction, cpu);
-        case 0b11:
-            [index] = rori(instruction, cpu);
-    }
-    let address;
-    if (getBit(instruction, 23)) {
-        address = rnVal + index;
-    } else {
-        address = rnVal - index;
+        switch (shift) {
+            case 0b00:
+                lsli(cpu);
+            case 0b01:
+                lsri(cpu);
+            case 0b10:
+                asri(cpu);
+            case 0b11:
+                rori(cpu);
+        }
+        cpu.dequeueData();
+        let index = cpu.dequeueData();
+        let address;
+        if (getBit(instruction, 23)) {
+            address = rnVal + index;
+        } else {
+            address = rnVal - index;
+        }
+
+        if (testCondition(cpu)) {
+            cpu.writeRegister(rn, address);
+        }
+
+        cpu.enqueueData(address);
     }
 
-    if (testCondition(cpu)) {
-        cpu.writeRegister(rn, address);
-    }
-
-    return address;
+    cpu.enqueuePipeline(stage);
 
 }
 
 export function scaledRegOffPostIndex(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let shift = getBits(instruction, 6, 5);
-    let rnVal = cpu.readRegister(rn);
-    let index!: number;
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let shift = getBits(instruction, 6, 5);
+        let rnVal = cpu.readRegister(rn);
 
-    switch (shift) {
-        case 0b00:
-            [index] = lsli(instruction, cpu);
-        case 0b01:
-            [index] = lsri(instruction, cpu);
-        case 0b10:
-            [index] = asri(instruction, cpu);
-        case 0b11:
-            [index] = rori(instruction, cpu);
+        switch (shift) {
+            case 0b00:
+                lsli(cpu);
+            case 0b01:
+                lsri(cpu);
+            case 0b10:
+                asri(cpu);
+            case 0b11:
+                rori(cpu);
+        }
+        cpu.dequeueData();
+        let index = cpu.dequeueData();
+        if (testCondition(cpu)) {
+            if (getBit(instruction, 23)) {
+                cpu.writeRegister(rn, rnVal + index);
+            } else {
+                cpu.writeRegister(rn, rnVal - index);
+            }
+        }
+
+        cpu.enqueueData(rnVal);
     }
+    cpu.enqueuePipeline(stage);
+}
 
-    if (testCondition(cpu)) {
+export function miscImmedOffset(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+
         if (getBit(instruction, 23)) {
-            cpu.writeRegister(rn, rnVal + index);
+            cpu.enqueueData(rnVal + offset8);
         } else {
-            cpu.writeRegister(rn, rnVal - index);
+            cpu.enqueueData(rnVal - offset8);
         }
     }
 
-    return rnVal;
+    cpu.enqueuePipeline(stage);
 }
-
-export function miscImmedOffset(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
-
-    if (getBit(instruction, 23)) {
-        return rnVal + offset8;
-    } else {
-        return rnVal - offset8;
-    }
-}
-export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
-    let address;
-    if (getBit(instruction, 23)) {
-        address = rnVal + offset8;
-    } else {
-        address = rnVal - offset8;
-    }
-
-    if (testCondition(cpu)) {
-        cpu.writeRegister(rn, address);
-    }
-
-    return address;
-}
-
-export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): u32 {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
-    if (testCondition(cpu)) {
+export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+        let address;
         if (getBit(instruction, 23)) {
-            cpu.writeRegister(rn, rnVal + offset8);
+            address = rnVal + offset8;
         } else {
-            cpu.writeRegister(rn, rnVal - offset8);
+            address = rnVal - offset8;
         }
+
+        if (testCondition(cpu)) {
+            cpu.writeRegister(rn, address);
+        }
+
+        cpu.enqueueData(address);
     }
-    return rnVal;
+    cpu.enqueuePipeline(stage);
+}
+
+export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
+        if (testCondition(cpu)) {
+            if (getBit(instruction, 23)) {
+                cpu.writeRegister(rn, rnVal + offset8);
+            } else {
+                cpu.writeRegister(rn, rnVal - offset8);
+            }
+        }
+        cpu.enqueueData(rnVal);
+
+    }
+
+    cpu.enqueuePipeline(stage);
 }
 
 export function ldmIncrAfter(cpu: ARM7CPU): [u32, u32] {
