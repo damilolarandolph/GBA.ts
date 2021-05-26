@@ -1,6 +1,7 @@
 module.exports = {
     mount: {
         public: { url: "/", static: true },
-        src: "/"
+        src: "/",
+        wasm: { url: "/wasm", static: true }
     }
 }
