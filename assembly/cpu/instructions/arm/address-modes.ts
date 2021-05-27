@@ -1,4 +1,3 @@
-import { escapeLeadingUnderscores } from "typescript";
 import { countSetBits, getBit, getBits } from "../../../utils/bits";
 import { ARM7CPU, CPU_MODES } from "../../cpu";
 import { StatusFlags } from "../../registers";
@@ -20,7 +19,7 @@ export function dataProcRegister(cpu: ARM7CPU): void {
         let instruction = cpu.currentInstruction;
         let regNo = u32(getBits(instruction, 3, 0));
         let operand = cpu.readRegister(regNo);
-        let carryOut = cpu.CPSR.getFlag(StatusFlags.CARRY);
+        let carryOut = cpu.isFlag(StatusFlags.CARRY);
         cpu.enqueueData(operand);
         cpu.enqueueData(u32(carryOut));
     }
@@ -155,7 +154,7 @@ export function rorr(instruction: u32, cpu: ARM7CPU): void {
 }
 
 export function rrx(bits: u32, amount: number, cpu: ARM7CPU): void {
-    let cFlag = cpu.CPSR.getFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
+    let cFlag = cpu.isFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
     let result = (cFlag << 31) | (amount >> 1);
     cpu.enqueueData(result);
     cpu.enqueueData(u32(getBit(bits, 0)));
@@ -322,7 +321,7 @@ export function immedPreIndexed(cpu: ARM7CPU): void {
         let rn = getBits(instruction, 19, 16);
         let rnVal = cpu.readRegister(rn);
         let offset12 = getBits(instruction, 11, 0);
-        let address;
+        let address: u32;
         if (getBit(instruction, 23)) {
             address = rnVal + offset12;
         } else {
@@ -387,7 +386,7 @@ export function regOffPreIndexed(cpu: ARM7CPU): void {
         let rnVal = cpu.readRegister(rn);
         let rm = getBits(instruction, 3, 0);
         let rmVal = cpu.readRegister(rm);
-        let address;
+        let address: u32;
         if (getBit(instruction, 23)) {
             address = rnVal + rmVal;
         } else {
@@ -424,7 +423,7 @@ export function scaledRegOffPreIndex(cpu: ARM7CPU): void {
         }
         cpu.dequeueData();
         let index = cpu.dequeueData();
-        let address;
+        let address: u32;
         if (getBit(instruction, 23)) {
             address = rnVal + index;
         } else {
@@ -442,7 +441,7 @@ export function scaledRegOffPreIndex(cpu: ARM7CPU): void {
 
 }
 
-export function scaledRegOffPostIndex(cpu: ARM7CPU): u32 {
+export function scaledRegOffPostIndex(cpu: ARM7CPU): void {
     let stage = function (cpu: ARM7CPU): void {
         let instruction = cpu.currentInstruction;
         let rn = getBits(instruction, 19, 16);
@@ -496,7 +495,7 @@ export function miscImmedOffsetPreIndexed(cpu: ARM7CPU): void {
         let rn = getBits(instruction, 19, 16);
         let rnVal = cpu.readRegister(rn);
         let offset8 = (getBits(instruction, 11, 8) << 4) | getBits(instruction, 3, 0);
-        let address;
+        let address: u32;
         if (getBit(instruction, 23)) {
             address = rnVal + offset8;
         } else {
@@ -532,57 +531,72 @@ export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): void {
     cpu.enqueuePipeline(stage);
 }
 
-export function ldmIncrAfter(cpu: ARM7CPU): [u32, u32] {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let registerList = getBits(instruction, 15, 0);
-    let startAddress = rnVal;
-    let endAddress = rnVal + (countSetBits(registerList) * 4) - 4
+export function ldmIncrAfter(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let registerList = getBits(instruction, 15, 0);
+        let startAddress = rnVal;
+        let endAddress = rnVal + (countSetBits(registerList) * 4) - 4
 
-    if (testCondition(cpu) && getBit(instruction, 21)) {
-        cpu.writeRegister(rn, endAddress + 4);
+        if (testCondition(cpu) && getBit(instruction, 21)) {
+            cpu.writeRegister(rn, endAddress + 4);
+        }
+        cpu.enqueueData(startAddress);
+        cpu.enqueueData(endAddress);
     }
 
-    return [startAddress, endAddress];
+    cpu.enqueuePipeline(stage);
 }
 
-export function ldmIncrBefore(cpu: ARM7CPU): [u32, u32] {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let registerList = getBits(instruction, 15, 0);
-    let startAddress = rnVal + 4;
-    let endAddress = rnVal + (countSetBits(registerList) * 4)
-    if (testCondition(cpu) && getBit(instruction, 21)) {
-        cpu.writeRegister(rn, endAddress);
+export function ldmIncrBefore(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let registerList = getBits(instruction, 15, 0);
+        let startAddress = rnVal + 4;
+        let endAddress = rnVal + (countSetBits(registerList) * 4)
+        if (testCondition(cpu) && getBit(instruction, 21)) {
+            cpu.writeRegister(rn, endAddress);
+        }
+        cpu.enqueueData(startAddress);
+        cpu.enqueueData(endAddress);
     }
-
-    return [startAddress, endAddress];
+    cpu.enqueuePipeline(stage);
 }
 
-export function ldmDecrAfter(cpu: ARM7CPU): [u32, u32] {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let registerList = getBits(instruction, 15, 0);
-    let startAddress = rnVal - (countSetBits(registerList) * 4) + 4
-    let endAddress = rnVal;
-    if (testCondition(cpu) && getBit(instruction, 21)) {
-        cpu.writeRegister(rn, startAddress - 4);
+export function ldmDecrAfter(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let registerList = getBits(instruction, 15, 0);
+        let startAddress = rnVal - (countSetBits(registerList) * 4) + 4
+        let endAddress = rnVal;
+        if (testCondition(cpu) && getBit(instruction, 21)) {
+            cpu.writeRegister(rn, startAddress - 4);
+        }
+        cpu.enqueueData(startAddress);
+        cpu.enqueueData(endAddress);
     }
-    return [startAddress, endAddress];
+    cpu.enqueuePipeline(stage)
 }
 
-export function ldmDecrBefor(cpu: ARM7CPU): [u32, u32] {
-    let instruction = cpu.currentInstruction;
-    let rn = getBits(instruction, 19, 16);
-    let rnVal = cpu.readRegister(rn);
-    let registerList = getBits(instruction, 15, 0);
-    let startAddress = rnVal - (countSetBits(registerList) * 4);
-    let endAddress = rnVal - 4;
-    if (testCondition(cpu) && getBit(instruction, 21)) {
-        cpu.writeRegister(rn, startAddress);
+export function ldmDecrBefor(cpu: ARM7CPU): void {
+    let stage = function (cpu: ARM7CPU): void {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let registerList = getBits(instruction, 15, 0);
+        let startAddress = rnVal - (countSetBits(registerList) * 4);
+        let endAddress = rnVal - 4;
+        if (testCondition(cpu) && getBit(instruction, 21)) {
+            cpu.writeRegister(rn, startAddress);
+        }
+        cpu.enqueueData(startAddress);
+        cpu.enqueueData(endAddress);
     }
-    return [startAddress, endAddress];
+    cpu.enqueuePipeline(stage);
 }
