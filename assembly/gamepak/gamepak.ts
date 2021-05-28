@@ -1,11 +1,11 @@
 import MemoryAccessor from "../memory/memory-accessor";
-import { MemoryMap } from "../memory/memory-map";
+import MemoryMap from "../memory/memory-map";
 
 // 32 MB cartridge;
 // @ts-ignore: decorator
 @global
 export var cartData = new Uint8Array(32000000);
-export default class GamePak extends MemoryMap {
+export default class GamePak implements MemoryMap {
 
 
     read32(address: u32, accessor: MemoryAccessor): u32 {

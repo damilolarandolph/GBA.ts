@@ -1,7 +1,7 @@
 import MemoryAccessor from "../memory/memory-accessor";
-import { MemoryMap } from "../memory/memory-map";
+import MemoryMap from "../memory/memory-map";
 
-class PaletteRam extends MemoryMap {
+class PaletteRam implements MemoryMap {
     // 1K ?
     private data: Uint8Array = new Uint8Array(1000);
 

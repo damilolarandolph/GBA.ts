@@ -1,7 +1,7 @@
 import MemoryAccessor from "../memory/memory-accessor";
-import { MemoryMap } from "../memory/memory-map";
+import MemoryMap from "../memory/memory-map";
 
-export default class VRAM extends MemoryMap {
+export default class VRAM implements MemoryMap {
     private data: Uint8Array = new Uint8Array(96000);
 
     read32(address: u32, accessor: MemoryAccessor): u32 {

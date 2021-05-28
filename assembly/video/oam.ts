@@ -1,7 +1,7 @@
 import MemoryAccessor from "../memory/memory-accessor";
-import { MemoryMap } from "../memory/memory-map";
+import MemoryMap from "../memory/memory-map";
 
-export class OAM extends MemoryMap {
+export class OAM implements MemoryMap {
     // 96K ?
     private data: Uint8Array = new Uint8Array(1000);
 
