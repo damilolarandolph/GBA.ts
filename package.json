@@ -9,6 +9,7 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.18.32",
     "@snowpack/plugin-typescript": "^1.2.1",
+    "autoprefixer": "^10.2.6",
     "typescript": "^4.2.4"
   },
   "scripts": {
@@ -20,7 +21,11 @@
     "test": "node tests"
   },
   "devDependencies": {
+    "@snowpack/plugin-postcss": "^1.4.0",
     "assemblyscript": "^0.18.32",
-    "snowpack": "^3.5.1"
+    "postcss": "^8.3.0",
+    "postcss-cli": "^8.3.1",
+    "snowpack": "^3.5.1",
+    "tailwindcss": "^2.1.2"
   }
 }
