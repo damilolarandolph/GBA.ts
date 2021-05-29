@@ -1,6 +1,8 @@
 import MemoryAccessor from '../memory/memory-accessor';
-import { MemoryMap } from '../memory/memory-map';
+import MemoryMap from '../memory/memory-map';
 import Queue from '../utils/queue';
+import * as ins from './instructions/arm/address-modes';
+import * as alu from './instructions/arm/alu';
 import { CPSR, RegisterBank, StatusFlags } from './registers';
 
 export enum CPU_MODES {
@@ -40,6 +42,8 @@ enum OPS {
 }
 
 export type instructionQueueFunc = (cpu: ARM7CPU) => void;
+
+
 function coolFunc(cpu: ARM7CPU): void {
     trace("HERE", 2, 3, 3);
 }
@@ -47,6 +51,8 @@ export class ARM7CPU implements MemoryAccessor {
     private _registerBank: RegisterBank = new RegisterBank();
     private _instructionQueue: Queue<instructionQueueFunc | null> = new Queue<instructionQueueFunc | null>(100);
     private _dataQueue: Queue<u32> = new Queue<u32>(100);
+    private _opcodeQueue: Queue<u32> = new Queue<u32>(100);
+    private _instructionStage: u32 = 0;
     private _memoryMap: MemoryMap;
     private _currentInstruction: u32 = 0;
 
@@ -57,9 +63,21 @@ export class ARM7CPU implements MemoryAccessor {
         (this._instructionQueue.dequeue() as instructionQueueFunc)(this);
     }
 
-    enqueuePipeline(func: instructionQueueFunc) {
+    tick(): void {
+    }
+
+    enqueuePipeline(func: instructionQueueFunc): void {
         this._instructionQueue.enqueue(func);
     }
+
+    set instructionStage(stage: u32) {
+        this.instructionStage = stage;
+    }
+
+    get instructionStage(): u32 {
+        return this.instructionStage;
+    }
+
 
     dequeuePipeline(): instructionQueueFunc {
         return (this._instructionQueue.dequeue() as instructionQueueFunc);
@@ -90,8 +108,16 @@ export class ARM7CPU implements MemoryAccessor {
     }
 
 
-    get CPSR(): CPSR {
-        return this._registerBank.getCPSR();
+    get CPSR(): u32 {
+        return this._registerBank.getCPSR().read();
+    }
+
+    get SPSR(): u32 {
+        return this._registerBank.getSPSR().read();
+    }
+
+    set CPSR(data: u32) {
+        this._registerBank.getCPSR().write(this._registerBank.getCPSR().read());
     }
 
 
@@ -113,6 +139,14 @@ export class ARM7CPU implements MemoryAccessor {
 
     addWaitStates(val: number): void {
 
+    }
+
+    get PC(): u32 {
+        return this._registerBank.getRegister(15).read();
+    }
+
+    set PC(value: u32) {
+        this._registerBank.getRegister(15).write(value);
     }
 
     read32(address: u32): u32 {
