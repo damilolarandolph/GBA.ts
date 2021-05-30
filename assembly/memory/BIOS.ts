@@ -1,10 +1,8 @@
-import MemoryAccessor from "../memory/memory-accessor";
-import MemoryMap from "../memory/memory-map";
+import MemoryAccessor from "./memory-accessor";
+import MemoryMap from "./memory-map";
 
-export default class PaletteRam implements MemoryMap {
-    // 1K ?
-    private data: Uint8Array = new Uint8Array(1000);
-
+export default class BIOS implements MemoryMap {
+    private data: Uint8Array = new Uint8Array(16000);
     read32(address: u32, accessor: MemoryAccessor): u32 {
         let byte1 = this.data[address];
         let byte2 = this.data[address + 1];
