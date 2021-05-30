@@ -33,6 +33,14 @@ export default class Queue<T>{
         return this.items == 0;
     }
 
+    public peek(): T {
+        if (this.items == 0) {
+
+            throw new Error("Can't peek, queue is empty");
+        }
+        return this.data[this.startNeedle];
+    }
+
     public flush(): void {
         this.items = 0;
         this.startNeedle = this.endNeedle = 0;
