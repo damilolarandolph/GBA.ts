@@ -56,12 +56,11 @@ export class RegisterBank {
         this.SPSRs.set(CPU_MODES.UND, new SPSR());
     }
 
-    private CPSR = new CPSR();
+    private CPSR: CPSR = new CPSR();
 
     private SPSRs: Map<number, SPSR> = new Map();
 
-    getRegister(regNo: number): Register {
-        let mode = this.CPSR.getMode();
+    getRegister(regNo: number, mode: CPU_MODES): Register {
         if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
             let index = regNo - 8;
             return this.registers.get(CPU_MODES.FIQ)[index];
@@ -75,12 +74,17 @@ export class RegisterBank {
         return this.registers.get(CPU_MODES.USR)[regNo];
     }
 
-    swapToSPSR(newMode: CPU_MODES) {
+    getRegisterForCurrentMode(regNo: number): Register {
+        let mode = this.CPSR.getMode();
+        return this.getRegister(regNo, mode);
+    }
+
+    swapToSPSR(newMode: CPU_MODES): void {
         this.SPSRs.get(newMode).write(this.CPSR.read());
         this.CPSR.setMode(newMode);
     }
 
-    swapFromSPSR() {
+    swapFromSPSR(): void {
         let mode = this.CPSR.getMode();
         this.CPSR.write(this.SPSRs.get(mode).read());
     }
@@ -88,6 +92,11 @@ export class RegisterBank {
     getCPSR(): CPSR {
         return this.CPSR;
     }
+
+    getSPSR(): SPSR {
+        return this.SPSRs.get(this.CPSR.getMode());
+    }
+
 }
 
 
@@ -97,7 +106,7 @@ export class Register {
     read(): u32 {
         return this.data;
     }
-    write(val: u32) {
+    write(val: u32): void {
         this.data = val;
     }
 }
@@ -132,12 +141,12 @@ export class CPSR extends Register {
         throw new Error("UNKOWN REGISTER");
     }
 
-    setMode(mode: CPU_MODES) {
+    setMode(mode: CPU_MODES): void {
         let newData = this.data & mode;
         this.data = newData;
     }
 
-    setFlag(flag: StatusFlags, value: boolean) {
+    setFlag(flag: StatusFlags, value: boolean): void {
         this.data = setBit(this.data, flag, value);
     }
 

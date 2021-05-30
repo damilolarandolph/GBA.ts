@@ -1,9 +1,7 @@
 import MemoryAccessor from '../memory/memory-accessor';
 import MemoryMap from '../memory/memory-map';
 import Queue from '../utils/queue';
-import * as ins from './instructions/arm/address-modes';
-import * as alu from './instructions/arm/alu';
-import { CPSR, RegisterBank, StatusFlags } from './registers';
+import { RegisterBank, StatusFlags } from './registers';
 
 export enum CPU_MODES {
 
@@ -19,34 +17,10 @@ export enum CPU_MODES {
 
 
 
-enum OPS {
-    ADD,
-    SUB,
-    TEST,
-    CMP,
-    LOAD_REG,
-    STORE_REG,
-    LOAD_MEM,
-    STORE_MEM,
-    TEST_COND,
-    LSL,
-    ROR,
-    RRX,
-    LSR,
-    ASR,
-    ASL,
-    WAIT_N,
-    WAIT_I,
-    WAIT_S,
-    END_OP,
-}
 
 export type instructionQueueFunc = (cpu: ARM7CPU) => void;
 
 
-function coolFunc(cpu: ARM7CPU): void {
-    trace("HERE", 2, 3, 3);
-}
 export class ARM7CPU implements MemoryAccessor {
     private _registerBank: RegisterBank = new RegisterBank();
     private _instructionQueue: Queue<instructionQueueFunc | null> = new Queue<instructionQueueFunc | null>(100);
@@ -59,8 +33,6 @@ export class ARM7CPU implements MemoryAccessor {
 
     constructor(memoryMap: MemoryMap) {
         this._memoryMap = memoryMap;
-        this._instructionQueue.enqueue(coolFunc);
-        (this._instructionQueue.dequeue() as instructionQueueFunc)(this);
     }
 
     tick(): void {
@@ -99,12 +71,20 @@ export class ARM7CPU implements MemoryAccessor {
         return this._currentInstruction;
     }
 
-    readRegister(regNo: number): u32 {
-        return this._registerBank.getRegister(regNo).read();
+    readRegister(regNo: number, mode: CPU_MODES = -1): u32 {
+        if (mode == -1) {
+            return this._registerBank.getRegisterForCurrentMode(regNo).read();
+        } else {
+            return this._registerBank.getRegister(regNo, mode).read();
+        }
     }
 
-    writeRegister(regNo: number, val: u32): void {
-        this._registerBank.getRegister(regNo).write(val);
+    writeRegister(regNo: number, val: u32, mode: CPU_MODES = -1): void {
+        if (mode == -1) {
+            this._registerBank.getRegisterForCurrentMode(regNo).write(val);
+        } else {
+            this._registerBank.getRegister(regNo, mode).write(val);
+        }
     }
 
 
@@ -116,6 +96,10 @@ export class ARM7CPU implements MemoryAccessor {
         return this._registerBank.getSPSR().read();
     }
 
+    set SPSR(val: u32) {
+        this._registerBank.getCPSR().write(val)
+    }
+
     set CPSR(data: u32) {
         this._registerBank.getCPSR().write(this._registerBank.getCPSR().read());
     }
@@ -123,6 +107,14 @@ export class ARM7CPU implements MemoryAccessor {
 
     isFlag(flag: StatusFlags): boolean {
         return this._registerBank.getCPSR().getFlag(flag);
+    }
+
+    get mode(): CPU_MODES {
+        return this._registerBank.getCPSR().getMode();
+    }
+
+    set mode(val: CPU_MODES) {
+        this._registerBank.getCPSR().setMode(val);
     }
 
     flagVal(flag: StatusFlags): u32 {
@@ -142,11 +134,11 @@ export class ARM7CPU implements MemoryAccessor {
     }
 
     get PC(): u32 {
-        return this._registerBank.getRegister(15).read();
+        return this._registerBank.getRegisterForCurrentMode(15).read();
     }
 
     set PC(value: u32) {
-        this._registerBank.getRegister(15).write(value);
+        this._registerBank.getRegisterForCurrentMode(15).write(value);
     }
 
     read32(address: u32): u32 {

@@ -4,7 +4,13 @@ import { StatusFlags } from "../../registers";
 import { testCondition } from "../instructions";
 
 //export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];
+
+// @ts-ignore: decorator
+@global
 export var operand: u32 = 0;
+
+// @ts-ignore: decorator
+@global
 export var shifterOut: u32 = 0;
 export function dataProcImmediate(instruction: u32, cpu: ARM7CPU): void {
     let immed8 = u32(getBits(instruction, 7, 0));
