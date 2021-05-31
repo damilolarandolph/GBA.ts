@@ -364,7 +364,6 @@ export function scaledRegOffPreIndex(cpu: ARM7CPU): void {
         case 0b11:
             rori(cpu);
     }
-    cpu.dequeueData();
     let address: u32;
     if (getBit(instruction, 23)) {
         address = rnVal + operand;
