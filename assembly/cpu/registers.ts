@@ -63,15 +63,15 @@ export class RegisterBank {
     getRegister(regNo: number, mode: CPU_MODES): Register {
         if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
             let index = regNo - 8;
-            return this.registers.get(CPU_MODES.FIQ)[index];
+            return this.registers.get(CPU_MODES.FIQ)[i32(index)];
         }
 
         if ((mode != CPU_MODES.USR && mode != CPU_MODES.SYS) && regNo >= 13 && regNo < 15) {
             let index = regNo - 13;
-            return this.registers.get(mode)[index];
+            return this.registers.get(mode)[i32(index)];
         }
 
-        return this.registers.get(CPU_MODES.USR)[regNo];
+        return this.registers.get(CPU_MODES.USR)[i32(regNo)];
     }
 
     getRegisterForCurrentMode(regNo: number): Register {
