@@ -137,12 +137,14 @@ export class CPSR extends Register {
                 return CPU_MODES.SYS;
             case CPU_MODES.UND:
                 return CPU_MODES.UND;
+            case CPU_MODES.USR:
+                return CPU_MODES.USR;
         }
         throw new Error("UNKOWN REGISTER");
     }
 
     setMode(mode: CPU_MODES): void {
-        let newData = this.data & mode;
+        let newData = (this.data & 0x1f) | mode;
         this.data = newData;
     }
 
