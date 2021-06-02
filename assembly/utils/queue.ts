@@ -29,7 +29,7 @@ export default class Queue<T>{
         return res;
     }
 
-    public isEmpty(): boolean {
+    get isEmpty(): boolean {
         return this.items == 0;
     }
 
@@ -39,6 +39,10 @@ export default class Queue<T>{
             throw new Error("Can't peek, queue is empty");
         }
         return this.data[this.startNeedle];
+    }
+
+    public peekEnd(): T {
+        return this.data[(this.endNeedle - 1) % this.data.length];
     }
 
     public flush(): void {
