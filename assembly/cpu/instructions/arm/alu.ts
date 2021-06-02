@@ -63,7 +63,7 @@ export function ADDC(cpu: ARM7CPU): void {
     }
 }
 
-function ADD(cpu: ARM7CPU): void {
+export function ADD(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) {
@@ -92,7 +92,7 @@ function ADD(cpu: ARM7CPU): void {
 
 
 
-function AND(cpu: ARM7CPU): void {
+export function AND(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) { }
@@ -116,7 +116,7 @@ function AND(cpu: ARM7CPU): void {
 }
 
 
-function BIC(cpu: ARM7CPU): void {
+export function BIC(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) { }
@@ -140,7 +140,7 @@ function BIC(cpu: ARM7CPU): void {
 }
 
 
-function CMN(cpu: ARM7CPU): void {
+export function CMN(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) { }
@@ -159,7 +159,7 @@ function CMN(cpu: ARM7CPU): void {
 
 
 
-function CMP(cpu: ARM7CPU): void {
+export function CMP(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) { };
@@ -177,7 +177,7 @@ function CMP(cpu: ARM7CPU): void {
 }
 
 
-function EOR(cpu: ARM7CPU): void {
+export function EOR(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) { }
@@ -202,7 +202,7 @@ function EOR(cpu: ARM7CPU): void {
 
 
 
-function MOV(cpu: ARM7CPU): void {
+export function MOV(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
         if (!testCondition(cpu)) { }
         deduceAddressing(cpu);
@@ -226,7 +226,7 @@ function MOV(cpu: ARM7CPU): void {
 }
 
 
-function MRS(cpu: ARM7CPU): void {
+export function MRS(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
         if (!testCondition(cpu)) { }
         cpu.instructionStage = 1;
@@ -242,7 +242,7 @@ function MRS(cpu: ARM7CPU): void {
     }
 }
 
-function MSR(cpu: ARM7CPU): void {
+export function MSR(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
         if (!testCondition(cpu)) { }
         cpu.instructionStage = 1;
