@@ -4,6 +4,7 @@
       "binaryFile": "public/wasm/gba.wasm",
       "textFile": "public/wasm/gba.wat",
       "sourceMap": true,
+      "runtime": "stub",
       "debug": true
     },
     "release": {
