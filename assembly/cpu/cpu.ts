@@ -33,6 +33,7 @@ export class ARM7CPU implements MemoryAccessor {
     constructor(memoryMap: MemoryMap) {
         this._memoryMap = memoryMap;
         this._registerBank.getCPSR().setMode(CPU_MODES.USR);
+        this.PC = 0x08000000
     }
 
     tick(): void {
@@ -41,14 +42,14 @@ export class ARM7CPU implements MemoryAccessor {
             return;
         }
 
-        // if (!this._instructionQueue.isEmpty) {
-        //     (this._instructionQueue.peek() as opHandler)(this)
-        // }
+        if (!this._instructionQueue.isEmpty) {
+            (this._instructionQueue.peek() as opHandler)(this);
+            --this._piplineLength
+        }
 
-        // --this._piplineLength
-        // if (this._waitStates == 0) {
-        //     this.prefetch();
-        // }
+        if (this._waitStates == 0) {
+            this.prefetch();
+        }
     }
 
     enqueuePipeline(func: opHandler): void {
@@ -59,7 +60,7 @@ export class ARM7CPU implements MemoryAccessor {
         if (this._piplineLength > 3) {
             return;
         }
-        if (this._piplineLength > 1) {
+        if (this._piplineLength > 0) {
             let postition = getBits(this.currentInstruction, 27, 20) * getBits(this.currentInstruction, 7, 4);
             this._instructionQueue.enqueue(armOpTable[postition]);
         }
@@ -103,6 +104,9 @@ export class ARM7CPU implements MemoryAccessor {
             this._registerBank.getRegisterForCurrentMode(regNo).write(val);
         } else {
             this._registerBank.getRegister(regNo, mode).write(val);
+        }
+        if (regNo == 15) {
+            this.clearPipeline();
         }
     }
 
@@ -171,7 +175,6 @@ export class ARM7CPU implements MemoryAccessor {
 
     set PC(value: u32) {
         this._registerBank.getRegisterForCurrentMode(15).write(value);
-        this.clearPipeline();
     }
 
     read32(address: u32): u32 {
