@@ -34,7 +34,7 @@ export function countSetBits(bits: u32): u32 {
     return count;
 }
 
-export function matchBitPattern(pattern: String, bits: u32): boolean {
+export function matchBitPattern(pattern: String, bits: u32): bool {
 
     for (let index = pattern.length - 1; index > 0; --index) {
 
