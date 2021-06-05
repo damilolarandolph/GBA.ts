@@ -26,6 +26,9 @@ export class SystemMemory implements MemoryMap {
         this.videoController = videoController;
     }
 
+
+    // @ts-ignore: decorator
+    @inline
     private mapForAddress(address: u32): MemoryMap {
         if (address >= 0 && address <= 0x00003FFF) {
             return this.BIOS;
