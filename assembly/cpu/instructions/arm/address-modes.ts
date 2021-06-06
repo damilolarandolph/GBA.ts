@@ -213,7 +213,7 @@ export function lsl(bits: u32, amount: number, cpu: ARM7CPU): void {
 }
 
 export function rotateRight(bits: u32, amount: number, cpu: ARM7CPU): void {
-    let result = (bits << (31 - amount)) | bits >> amount;
+    let result = (bits << u32(31 - amount)) | bits >>> u32(amount);
 
     if (amount == 0) {
         operand = result;

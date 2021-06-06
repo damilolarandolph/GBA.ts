@@ -29,23 +29,23 @@ export default class VideoController implements IODevice, MemoryMap {
         return this.OAM;
     }
 
-    tick() {
+    tick(): void {
 
     }
 
     read32(address: u32, accessor: memoryAccessor): u32 {
         return this.mapForAddress(address).read32(address, accessor);
     }
-    read16(address: u32, accessor: memoryAccessor): u32 {
+    read16(address: u32, accessor: memoryAccessor): u16 {
         return this.mapForAddress(address).read16(address, accessor);
     }
-    read8(address: u32, accessor: memoryAccessor): u32 {
+    read8(address: u32, accessor: memoryAccessor): u8 {
         return this.mapForAddress(address).read8(address, accessor);
     }
-    write8(address: u32, accessor: memoryAccessor, value: u32): void {
+    write8(address: u32, accessor: memoryAccessor, value: u8): void {
         this.mapForAddress(address).write8(address, accessor, value);
     }
-    write16(address: u32, accessor: memoryAccessor, value: u32): void {
+    write16(address: u32, accessor: memoryAccessor, value: u16): void {
         this.mapForAddress(address).write16(address, accessor, value);
     }
     write32(address: u32, accessor: memoryAccessor, value: u32): void {

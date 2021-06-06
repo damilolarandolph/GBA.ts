@@ -25,7 +25,7 @@ export class IOMap implements MemoryMap {
     }
 
     read8(address: u32, accessor: MemoryAccessor): u8 {
-        return u16(this.getDeviceForAddress(address).readIO(address));
+        return u8(this.getDeviceForAddress(address).readIO(address));
     }
 
     write8(address: u32, accessor: MemoryAccessor, value: u8): void {

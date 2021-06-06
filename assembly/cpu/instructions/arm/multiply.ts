@@ -106,7 +106,7 @@ export function UMLAL(cpu: ARM7CPU): void {
         cpu.writeRegister(rdLo, u32(result));
 
         if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result >> 32, 31))
+            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
     }
@@ -137,7 +137,7 @@ export function SMLAL(cpu: ARM7CPU): void {
         cpu.writeRegister(rdLo, u32(result));
 
         if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result >> 32, 31))
+            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
     }
@@ -167,7 +167,7 @@ export function SMLUL(cpu: ARM7CPU): void {
         cpu.writeRegister(rdLo, u32(result));
 
         if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result >> 32, 31))
+            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
     }
@@ -197,7 +197,7 @@ export function UMULL(cpu: ARM7CPU): void {
         cpu.writeRegister(rdLo, u32(result));
 
         if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result >> 32, 31))
+            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
     }

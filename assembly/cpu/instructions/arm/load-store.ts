@@ -67,7 +67,7 @@ export function STM(cpu: ARM7CPU): void {
 
 export function LDM2(cpu: ARM7CPU): void {
 
-    if (getBit(cpu.currentInstruction, 15)) { return LDM3(cpu) }
+    if (getBit(cpu.currentInstruction, 15)) { LDM3(cpu); return }
 
     if (cpu.instructionStage == 1) {
         if (!testCondition(cpu)) { cpu.finish(); return }
@@ -269,7 +269,7 @@ export function STRB(cpu: ARM7CPU): void {
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (cpu.instructionStage == 1) {
-        cpu.write8(loadStrAddr, cpu.readRegister(rd) & 0xff)
+        cpu.write8(loadStrAddr, u8(cpu.readRegister(rd) & 0xff))
         cpu.instructionStage = 2;
         return;
     }
@@ -288,7 +288,7 @@ export function STRBT(cpu: ARM7CPU): void {
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (cpu.instructionStage == 1) {
-        cpu.write8(loadStrAddr, cpu.readRegister(rd) & 0xff)
+        cpu.write8(loadStrAddr, u8(cpu.readRegister(rd) & 0xff))
         cpu.instructionStage = 2;
         return;
     }
@@ -348,7 +348,7 @@ export function STRH(cpu: ARM7CPU): void {
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (cpu.instructionStage == 1) {
-        cpu.write16(loadStrAddr, cpu.readRegister(rd) & 0xffff);
+        cpu.write16(loadStrAddr, u16(cpu.readRegister(rd) & 0xffff));
         cpu.instructionStage = 2;
         return;
     }
@@ -444,7 +444,7 @@ export function SWPB(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
-        cpu.write8(cpu.readRegister(rn), cpu.readRegister(rm) & 0xff)
+        cpu.write8(cpu.readRegister(rn), u8(cpu.readRegister(rm) & 0xff))
         cpu.instructionStage = 3;
         return;
     }
