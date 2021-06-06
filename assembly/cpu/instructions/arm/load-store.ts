@@ -18,7 +18,10 @@ var regList: u32 = 0;
 export function LDM(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 1) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceLDMAddressing(cpu);
         regList = getBits(cpu.currentInstruction, 15, 0);
         currentRegIndex = 0;
@@ -39,12 +42,16 @@ export function LDM(cpu: ARM7CPU): void {
         if (getBit(regList, currentRegIndex)) {
             cpu.PC = cpu.read32(currentAddress);
         }
+        cpu.finish();
     }
 }
 export function STM(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 1) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceLDMAddressing(cpu);
         regList = getBits(cpu.currentInstruction, 15, 0);
         currentRegIndex = 0;
@@ -62,6 +69,7 @@ export function STM(cpu: ARM7CPU): void {
         cpu.instructionStage = 3;
     }
     if (cpu.instructionStage == 3) {
+        cpu.finish();
     }
 }
 
@@ -89,13 +97,17 @@ export function LDM2(cpu: ARM7CPU): void {
         cpu.instructionStage = 3;
     }
     if (cpu.instructionStage == 3) {
+        cpu.finish();
     }
 }
 
 export function STM2(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 1) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceLDMAddressing(cpu);
         regList = getBits(cpu.currentInstruction, 14, 0);
         currentRegIndex = 0;
@@ -114,13 +126,17 @@ export function STM2(cpu: ARM7CPU): void {
         cpu.instructionStage = 3;
     }
     if (cpu.instructionStage == 3) {
+        cpu.finish();
     }
 }
 var pcVal = 0;
 export function LDM3(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 1) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceLDMAddressing(cpu);
         regList = getBits(cpu.currentInstruction, 15, 0);
         currentRegIndex = 0;
@@ -147,12 +163,16 @@ export function LDM3(cpu: ARM7CPU): void {
         } else {
             cpu.PC = pcVal & 0xFFFFFFFC;
         }
+        cpu.finish();
     }
 }
 
 export function LDR(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -172,12 +192,16 @@ export function LDR(cpu: ARM7CPU): void {
         } else {
             cpu.writeRegister(rd, operand);
         }
+        cpu.finish();
     }
 }
 
 export function STR(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -191,13 +215,16 @@ export function STR(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
-
+        cpu.finish();
     }
 }
 
 export function STRT(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -211,13 +238,16 @@ export function STRT(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
-
+        cpu.finish();
     }
 }
 
 export function LDRT(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -236,13 +266,17 @@ export function LDRT(cpu: ARM7CPU): void {
         } else {
             cpu.writeRegister(rd, operand);
         }
+        cpu.finish();
     }
 }
 
 var ldrbVal: u32;
 export function LDRB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -256,13 +290,17 @@ export function LDRB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 2) {
         let rd = getBits(cpu.currentInstruction, 15, 12);
         cpu.writeRegister(rd, ldrbVal);
+        cpu.finish();
     }
 
 }
 
 export function STRB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -275,13 +313,17 @@ export function STRB(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
+        cpu.finish();
     }
 
 }
 
 export function STRBT(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -294,13 +336,17 @@ export function STRBT(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
+        cpu.finish();
     }
 
 }
 
 export function LDRBT(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceByteAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -314,6 +360,7 @@ export function LDRBT(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 2) {
         let rd = getBits(cpu.currentInstruction, 15, 12);
         cpu.writeRegister(rd, ldrbVal);
+        cpu.finish();
     }
 
 }
@@ -322,7 +369,10 @@ export function LDRBT(cpu: ARM7CPU): void {
 
 export function LDRH(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceMiscAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -336,12 +386,16 @@ export function LDRH(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 2) {
         let rd = getBits(cpu.currentInstruction, 15, 12);
         cpu.writeRegister(rd, ldrbVal);
+        cpu.finish();
     }
 }
 
 export function STRH(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceMiscAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -354,12 +408,16 @@ export function STRH(cpu: ARM7CPU): void {
     }
 
     if (cpu.instructionStage == 2) {
+        cpu.finish();
     }
 }
 
 export function LDRSB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceMiscAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -376,12 +434,16 @@ export function LDRSB(cpu: ARM7CPU): void {
         ldrbVal <<= 24;
         ldrbVal >>= 24;
         cpu.writeRegister(rd, ldrbVal);
+        cpu.finish();
     }
 }
 
 export function LDRSH(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceMiscAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -398,12 +460,16 @@ export function LDRSH(cpu: ARM7CPU): void {
         ldrbVal <<= 16;
         ldrbVal >>= 16;
         cpu.writeRegister(rd, ldrbVal);
+        cpu.finish();
     }
 }
 
 export function SWP(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         cpu.instructionStage = 1;
     }
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -425,12 +491,16 @@ export function SWP(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 3) {
         cpu.writeRegister(rd, operand);
+        cpu.finish();
     }
 }
 var swpbVal: u32;
 export function SWPB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         cpu.instructionStage = 1;
     }
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -451,6 +521,7 @@ export function SWPB(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 3) {
         cpu.writeRegister(rd, swpbVal);
+        cpu.finish();
     }
 }
 

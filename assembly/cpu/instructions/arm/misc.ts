@@ -7,4 +7,5 @@ export function SWI(cpu: ARM7CPU): void {
         if (!testCondition(cpu)) { }
     }
     //TODO implement interrupts
+    cpu.finish();
 }

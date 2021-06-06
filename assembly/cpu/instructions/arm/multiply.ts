@@ -27,7 +27,7 @@ function deduceMStates(operand: u32): u32 {
 export function MLA(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -50,13 +50,14 @@ export function MLA(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish();
     }
 }
 
 export function MUL(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -78,12 +79,13 @@ export function MUL(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish();
     }
 }
 
 export function UMLAL(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -109,12 +111,13 @@ export function UMLAL(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish();
     }
 }
 
 export function SMLAL(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -140,12 +143,13 @@ export function SMLAL(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish();
     }
 }
 
 export function SMLUL(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -170,12 +174,13 @@ export function SMLUL(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish()
     }
 }
 
 export function UMULL(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return; }
         cpu.instructionStage = 1;
     }
 
@@ -200,5 +205,6 @@ export function UMULL(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
             cpu.setFlag(StatusFlags.ZERO, result == 0);
         }
+        cpu.finish();
     }
 }

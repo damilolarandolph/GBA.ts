@@ -40,7 +40,8 @@ export function ADDC(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) {
-
+                cpu.finish();
+                return;
             }
             deduceAddressing(cpu);
         default:
@@ -60,14 +61,17 @@ export function ADDC(cpu: ARM7CPU): void {
                 cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, operand + carryOut));
                 cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, operand + carryOut));
             }
+
     }
+    cpu.finish();
 }
 
 export function ADD(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
             if (!testCondition(cpu)) {
-
+                cpu.finish();
+                return;
             }
             deduceAddressing(cpu);
         default:
@@ -87,6 +91,7 @@ export function ADD(cpu: ARM7CPU): void {
                 cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, operand));
             }
     }
+    cpu.finish();
 }
 
 
@@ -95,7 +100,10 @@ export function ADD(cpu: ARM7CPU): void {
 export function AND(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
-            if (!testCondition(cpu)) { }
+            if (!testCondition(cpu)) {
+                cpu.finish();
+                return;
+            }
             deduceAddressing(cpu);
         default:
             let instruction = cpu.currentInstruction;
@@ -113,13 +121,17 @@ export function AND(cpu: ARM7CPU): void {
                 cpu.setFlag(StatusFlags.CARRY, shifterOut == 0 ? false : true);
             }
     }
+    cpu.finish();
 }
 
 
 export function BIC(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
-            if (!testCondition(cpu)) { }
+            if (!testCondition(cpu)) {
+                cpu.finish();
+                return;
+            }
             deduceAddressing(cpu);
         default:
             let instruction = cpu.currentInstruction;
@@ -137,13 +149,17 @@ export function BIC(cpu: ARM7CPU): void {
                 cpu.setFlag(StatusFlags.CARRY, shifterOut == 0 ? false : true);
             }
     }
+    cpu.finish();
 }
 
 
 export function CMN(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
-            if (!testCondition(cpu)) { }
+            if (!testCondition(cpu)) {
+                cpu.finish();
+                return;
+            }
             deduceAddressing(cpu);
         case 1:
             let instruction = cpu.currentInstruction;
@@ -162,7 +178,10 @@ export function CMN(cpu: ARM7CPU): void {
 export function CMP(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
-            if (!testCondition(cpu)) { };
+            if (!testCondition(cpu)) {
+                cpu.finish();
+                return;
+            };
             deduceAddressing(cpu);
         default:
             let instruction = cpu.currentInstruction;
@@ -174,13 +193,17 @@ export function CMP(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, operand));
             cpu.setFlag(StatusFlags.CARRY, signOverflowFrom(rnVal, i32(operand) * -1));
     }
+    cpu.finish();
 }
 
 
 export function EOR(cpu: ARM7CPU): void {
     switch (cpu.instructionStage) {
         case 0:
-            if (!testCondition(cpu)) { }
+            if (!testCondition(cpu)) {
+                cpu.finish();
+                return;
+            }
             deduceAddressing(cpu)
         default:
             let instruction = cpu.currentInstruction;
@@ -198,13 +221,17 @@ export function EOR(cpu: ARM7CPU): void {
                 cpu.setFlag(StatusFlags.CARRY, shifterOut == 1 ? true : false);
             }
     }
+    cpu.finish();
 }
 
 
 
 export function MOV(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -223,12 +250,17 @@ export function MOV(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.CARRY, shifterOut != 0);
         }
     }
+
+    cpu.finish();
 }
 
 
 export function MRS(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         cpu.instructionStage = 1;
     }
 
@@ -240,11 +272,15 @@ export function MRS(cpu: ARM7CPU): void {
             cpu.writeRegister(rd, cpu.CPSR);
         }
     }
+    cpu.finish();
 }
 
 export function MSR(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         cpu.instructionStage = 1;
     }
 
@@ -314,6 +350,7 @@ export function MSR(cpu: ARM7CPU): void {
             cpu.SPSR = mask;
         }
     }
+    cpu.finish();
 
 }
 
@@ -321,7 +358,10 @@ export function MSR(cpu: ARM7CPU): void {
 export function MVN(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -339,12 +379,16 @@ export function MVN(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.CARRY, shifterOut != 0);
         }
     }
+    cpu.finish();
 
 }
 
 export function ORR(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -365,11 +409,15 @@ export function ORR(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.CARRY, shifterOut != 0);
         }
     }
+    cpu.finish();
 }
 
 export function RSB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -387,11 +435,15 @@ export function RSB(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(operand, i32(cpu.readRegister(rn)) * -1))
         }
     }
+    cpu.finish();
 }
 
 export function RSC(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -414,7 +466,10 @@ export function RSC(cpu: ARM7CPU): void {
 
 export function SUB(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -432,11 +487,15 @@ export function SUB(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(cpu.readRegister(rn), i32(operand) * -1))
         }
     }
+    cpu.finish();
 }
 
 export function SBC(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -455,11 +514,15 @@ export function SBC(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(cpu.readRegister(rn), i32(operand + notC) * -1))
         }
     }
+    cpu.finish();
 }
 
 export function TEQ(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -469,11 +532,15 @@ export function TEQ(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, shifterOut == 0);
+    cpu.finish();
 }
 
 export function TST(cpu: ARM7CPU): void {
     if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
         deduceAddressing(cpu);
         cpu.instructionStage = 1;
     }
@@ -483,6 +550,7 @@ export function TST(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, shifterOut == 0);
+    cpu.finish();
 }
 
 
