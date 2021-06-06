@@ -67,8 +67,10 @@ export function STM(cpu: ARM7CPU): void {
 
 export function LDM2(cpu: ARM7CPU): void {
 
+    if (getBit(cpu.currentInstruction, 15)) { return LDM3(cpu) }
+
     if (cpu.instructionStage == 1) {
-        if (!testCondition(cpu)) { }
+        if (!testCondition(cpu)) { cpu.finish(); return }
         deduceLDMAddressing(cpu);
         regList = getBits(cpu.currentInstruction, 14, 0);
         currentRegIndex = 0;
