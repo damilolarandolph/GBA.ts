@@ -2,7 +2,6 @@ import { getBits } from '../../utils/bits';
 import { ARM7CPU } from '../cpu';
 import { StatusFlags } from '../registers';
 
-export type InstructionHandler = (cpu: ARM7CPU) => void;
 
 
 
