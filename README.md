@@ -1,11 +1,8 @@
-# Foobar
+# GBA.AS
 
-GBA.ts is a Gameboy Advance emulator written in Typescript.
+GBA.AS is a Gameboy Adavance emulator in WebAssembly with AssemblyScript .
 
 
-
-## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 
 ## License
