@@ -1,6 +1,6 @@
-# GBA.AS
+# GBA.as
 
-GBA.AS is a Gameboy Adavance emulator in WebAssembly with AssemblyScript .
+GBA.as is a Gameboy Adavance emulator in WebAssembly with AssemblyScript .
 
 
 
