@@ -126,9 +126,9 @@ export function rorr(instruction: u32, cpu: ARM7CPU): void {
     shifterOut = u32(getBit(rmVal, u32(rsVal & 0x1f) - 1));
 }
 
-export function rrx(bits: u32, amount: number, cpu: ARM7CPU): void {
+export function rrx(bits: u32, amount: u32, cpu: ARM7CPU): void {
     let cFlag = cpu.isFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
-    let result = (cFlag << 31) | (amount >> 1);
+    let result = u32(cFlag << 31) | (amount >> 1);
     operand = result;
     shifterOut = u32(getBit(bits, 0));
 }
@@ -136,7 +136,7 @@ export function rrx(bits: u32, amount: number, cpu: ARM7CPU): void {
 
 
 // Arithmetic shift right
-export function asr(bits: u32, amount: number, cpu: ARM7CPU): void {
+export function asr(bits: u32, amount: u32, cpu: ARM7CPU): void {
     if (amount == 0) {
         operand = bits;
         shifterOut = cpu.flagVal(StatusFlags.CARRY);
@@ -144,7 +144,7 @@ export function asr(bits: u32, amount: number, cpu: ARM7CPU): void {
     }
 
     if (amount < 32) {
-        let result = bits >> amount;
+        let result = bits >> <u32>amount;
         let carryOut = getBit(bits, amount - 1);
         operand = result;
         shifterOut = u32(carryOut);
@@ -162,7 +162,7 @@ export function asr(bits: u32, amount: number, cpu: ARM7CPU): void {
 
 
 //Logical shift right
-export function lsr(bits: u32, amount: number, cpu: ARM7CPU): void {
+export function lsr(bits: u32, amount: u32, cpu: ARM7CPU): void {
 
     if (amount == 0) {
         operand = bits;
@@ -170,8 +170,8 @@ export function lsr(bits: u32, amount: number, cpu: ARM7CPU): void {
     }
 
     if (amount < 32) {
-        let shiftResult = bits >>> amount
-        let carryOut = getBit(bits, amount - 1);
+        let shiftResult = bits >>> <u32>amount
+        let carryOut = getBit(bits, <u32>amount - 1);
         operand = shiftResult;
         shifterOut = u32(carryOut);
         return;
@@ -187,7 +187,7 @@ export function lsr(bits: u32, amount: number, cpu: ARM7CPU): void {
 }
 
 // Logical shift left
-export function lsl(bits: u32, amount: number, cpu: ARM7CPU): void {
+export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): void {
 
 
     if (amount == 0) {
@@ -197,8 +197,8 @@ export function lsl(bits: u32, amount: number, cpu: ARM7CPU): void {
     }
 
     if (amount < 32) {
-        let carryout = getBit(bits, 32 - amount);
-        operand = bits << amount;
+        let carryout = getBit(bits, u32(32 - amount));
+        operand = bits << <u32>amount;
         shifterOut = u32(carryout);
         return;
     }
@@ -212,7 +212,7 @@ export function lsl(bits: u32, amount: number, cpu: ARM7CPU): void {
     shifterOut = 0;
 }
 
-export function rotateRight(bits: u32, amount: number, cpu: ARM7CPU): void {
+export function rotateRight(bits: u32, amount: u32, cpu: ARM7CPU): void {
     let result = (bits << u32(31 - amount)) | bits >>> u32(amount);
 
     if (amount == 0) {
@@ -260,12 +260,16 @@ export function scaledRegOff(cpu: ARM7CPU): void {
     switch (shift) {
         case 0b00:
             lsli(cpu);
+            break;
         case 0b01:
             lsri(cpu);
+            break;
         case 0b10:
             asri(cpu);
+            break;
         case 0b11:
             rori(cpu);
+            break;
     }
     if (getBit(instruction, 23)) {
         loadStrAddr = rnVal + operand;
@@ -357,12 +361,16 @@ export function scaledRegOffPreIndex(cpu: ARM7CPU): void {
     switch (shift) {
         case 0b00:
             lsli(cpu);
+            break;
         case 0b01:
             lsri(cpu);
+            break;
         case 0b10:
             asri(cpu);
+            break;
         case 0b11:
             rori(cpu);
+            break;
     }
     let address: u32;
     if (getBit(instruction, 23)) {
@@ -386,12 +394,16 @@ export function scaledRegOffPostIndex(cpu: ARM7CPU): void {
     switch (shift) {
         case 0b00:
             lsli(cpu);
+            break;
         case 0b01:
             lsri(cpu);
+            break;
         case 0b10:
             asri(cpu);
+            break;
         case 0b11:
             rori(cpu);
+            break;
     }
     if (testCondition(cpu)) {
         if (getBit(instruction, 23)) {
