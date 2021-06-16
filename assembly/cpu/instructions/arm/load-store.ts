@@ -2,16 +2,70 @@ import { getBit, getBits, setBit } from "../../../utils/bits";
 import { ARM7CPU, CPU_MODES } from "../../cpu";
 import { StatusFlags } from "../../registers";
 import { testCondition } from "../instructions";
-import { ldmEndAddr, ldmStartAddr, loadStrAddr, operand, rotateRight } from "./address-modes";
+import { immedOffRegAddr, immedPostIndexed, immedPreIndexed, ldmDecrAfter, ldmDecrBefor, ldmEndAddr, ldmIncrAfter, ldmIncrBefore, ldmStartAddr, loadStrAddr, miscImmedOffset, miscImmedOffsetPostIndexed, miscImmedOffsetPreIndexed, operand, regOffPostIndexed, regOffPreIndexed, regOffRegAddr, rotateRight, scaledRegOff, scaledRegOffPostIndex, scaledRegOffPreIndex } from "./address-modes";
 
 var currentAddress: u32;
 export function deduceLDMAddressing(cpu: ARM7CPU): void {
-
+    let currentInstuction = cpu.currentInstruction;
+    let pBit = getBit(currentInstuction, 24);
+    let uBit = getBit(currentInstuction, 23);
+    if (pBit && uBit)
+        ldmIncrBefore(cpu);
+    else if (!pBit && uBit)
+        ldmIncrAfter(cpu);
+    else if (pBit && !uBit)
+        ldmDecrBefor(cpu);
+    else if (!pBit && !uBit)
+        ldmDecrAfter(cpu);
 }
 
-export function deduceByteAddressing(cpu: ARM7CPU): void { }
+export function deduceByteAddressing(cpu: ARM7CPU): void {
+    let currentInstruction = cpu.currentInstruction;
+    let immBit = getBit(currentInstruction, 25);
+    let pBit = getBit(currentInstruction, 24);
+    let wBit = getBit(currentInstruction, 21);
 
-export function deduceMiscAddressing(cpu: ARM7CPU): void { }
+    if (!wBit) {
+        if (immBit)
+            immedOffRegAddr(cpu);
+        else
+            scaledRegOff(cpu);
+    } else if (pBit) {
+        if (immBit)
+            immedPreIndexed(cpu);
+        else
+            scaledRegOffPreIndex(cpu);
+    } else {
+        if (immBit)
+            immedPostIndexed(cpu);
+        else
+            scaledRegOffPostIndex(cpu);
+    }
+}
+
+export function deduceMiscAddressing(cpu: ARM7CPU): void {
+    let currentInstruction = cpu.currentInstruction;
+    let pBit = getBit(currentInstruction, 24);
+    let wBit = getBit(currentInstruction, 21);
+    let immBit = getBit(currentInstruction, 22);
+
+    if (!wBit) {
+        if (immBit)
+            miscImmedOffset(cpu);
+        else
+            regOffRegAddr(cpu);
+    } else if (pBit) {
+        if (immBit)
+            miscImmedOffsetPreIndexed(cpu);
+        else
+            regOffPreIndexed(cpu);
+    } else {
+        if (immBit)
+            miscImmedOffsetPostIndexed(cpu);
+        else
+            regOffPostIndexed(cpu);
+    }
+}
 
 var currentRegIndex: u32 = 0;
 var regList: u32 = 0;

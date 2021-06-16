@@ -2,7 +2,7 @@ import { getBit, getBits } from "../../../utils/bits";
 import { ARM7CPU, CPU_MODES } from "../../cpu";
 import { StatusFlags } from "../../registers";
 import { testCondition } from "../instructions";
-import { operand, rotateRight, shifterOut } from "./address-modes";
+import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, operand, rori, rorr, rotateRight, shifterOut } from "./address-modes";
 
 
 
@@ -33,6 +33,35 @@ function signOverflowFrom(lhs: u32, rhs: u32): boolean {
 }
 
 export function deduceAddressing(cpu: ARM7CPU): void {
+    let currentInstruction = cpu.currentInstruction;
+    let immediateFlag = getBit(currentInstruction, 25);
+    if (immediateFlag) {
+        dataProcImmediate(currentInstruction, cpu);
+        return;
+    }
+
+    let shiftRegFlag = getBit(currentInstruction, 4);
+    let shiftType = getBits(currentInstruction, 6, 5);
+
+    if (shiftRegFlag) {
+        if (shiftType == 0)
+            lslr(cpu);
+        else if (shiftType == 1)
+            lsrr(cpu);
+        else if (shiftType == 2)
+            asrr(cpu);
+        else if (shiftType == 3)
+            rorr(currentInstruction, cpu);
+    } else {
+        if (shiftType == 0)
+            lsli(cpu);
+        else if (shiftType == 1)
+            lsri(cpu);
+        else if (shiftType == 2)
+            asri(cpu);
+        else if (shiftType == 3)
+            rori(cpu);
+    }
 
 }
 
