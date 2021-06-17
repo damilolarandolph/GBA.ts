@@ -18,9 +18,12 @@ export function getBit(bits: u32, bitPos: u32): boolean {
 }
 
 export function getBits(bits: u32, from: u32, to: u32): u32 {
-    let distance = (from - to) + 1;
-    let clearBits = ~(((u32(MAX_32)) >> distance) << distance);
-    return u32(bits & clearBits);
+    if (from == to) {
+        return (bits >> to) & 0x1
+    }
+    bits <<= (31 - from);
+    bits >>= to + (31 - from);
+    return bits;
 }
 
 export function countSetBits(bits: u32): u32 {
