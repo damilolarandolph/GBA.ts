@@ -39,7 +39,7 @@ export function countSetBits(bits: u32): u32 {
 
 export function matchBitPattern(pattern: String, bits: u32): bool {
 
-    for (let index = pattern.length - 1; index > 0; --index) {
+    for (let index = pattern.length - 1; index >= 0; --index) {
 
         if (pattern.charAt(index) == "1" && (bits & 0x1) == 0) {
             return false;
