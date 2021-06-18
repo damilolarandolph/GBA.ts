@@ -41,13 +41,18 @@ export default class Queue<T>{
         return this.data[this.startNeedle];
     }
 
+    get length(): number {
+        return this.items;
+    }
+
     public peekEnd(): T {
         return this.data[(this.endNeedle - 1) % this.data.length];
     }
 
     public flush(): void {
         this.items = 0;
-        this.startNeedle = this.endNeedle = 0;
+        this.startNeedle = 0;
+        this.endNeedle = 0;
     }
 
 }
