@@ -270,7 +270,10 @@ export function MOV(cpu: ARM7CPU): void {
 
     if (cpu.instructionStage == 1) {
         cpu.writeRegister(rd, operand);
-        if (!sBit) { }
+        if (!sBit) {
+            cpu.finish();
+            return;
+        }
         if (rd == 15) {
             cpu.CPSR = cpu.SPSR;
         } else {
@@ -278,6 +281,7 @@ export function MOV(cpu: ARM7CPU): void {
             cpu.setFlag(StatusFlags.ZERO, operand == 0);
             cpu.setFlag(StatusFlags.CARRY, shifterOut != 0);
         }
+        cpu.finish();
     }
 
     cpu.finish();
