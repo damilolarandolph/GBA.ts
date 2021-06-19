@@ -4,3 +4,4 @@
 /public/wasm
 /build
 /cache
+*.code-workspace
