@@ -15,13 +15,21 @@ export function BBL(cpu: ARM7CPU): void {
     trace("Branch ADDR", 1, targetAddr);
     // Left align 24 bits
     targetAddr <<= 8;
-    trace("Branch Addr Shifted", 1, targetAddr);
     //Sign extend and shift to left by 2
-    targetAddr >>= 6;
+    targetAddr = u32(<i32>targetAddr >> 6);
+
+    trace("Branch Addr Shifted", 1, targetAddr);
     if (lBit) {
-        cpu.writeRegister(14, targetAddr);
+        cpu.writeRegister(14, cpu.PC - 4);
     }
-    let addr: u32 = i32(cpu.readRegister(15)) + i32(targetAddr);
+    let addr: u32;
+
+    if (getBit(targetAddr, 31)) {
+        addr = cpu.readRegister(15) - (~targetAddr);
+    } else {
+        addr = cpu.readRegister(15) + targetAddr;
+    }
+
     trace("Branch Addr", 1, addr);
     cpu.writeRegister(15, addr);
     cpu.finish();
