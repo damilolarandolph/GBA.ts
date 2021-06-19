@@ -12,6 +12,10 @@ export default class BIOS implements MemoryMap {
         return data;
     }
 
+    getBuffer(): Uint8Array {
+        return this.data;
+    }
+
     read16(address: u32, accessor: MemoryAccessor): u16 {
         let byte1 = this.data[address];
         let byte2 = this.data[address + 1];
