@@ -3,24 +3,31 @@ import MemoryMap from "../memory/memory-map";
 
 // 32 MB cartridge;
 // @ts-ignore: decorator
-@global
-export var cartData = new Uint8Array(32000000);
+export const cartData = new Uint8Array(32000000);
 export default class GamePak implements MemoryMap {
 
 
     read32(address: u32, accessor: MemoryAccessor): u32 {
-        let byte1 = cartData[address];
-        let byte2 = cartData[address + 1];
-        let byte3 = cartData[address + 2];
-        let byte4 = cartData[address + 3];
-        let data = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
+        address -= 0x08000000;
+        if (address >= 32000000) {
+            trace("Address to large", 1, address);
+        }
+        let byte1: u32 = cartData[address];
+        let byte2: u32 = cartData[address + 1];
+        let byte3: u32 = cartData[address + 2];
+        let byte4: u32 = cartData[address + 3];
+        trace("Byte1", 1, byte1);
+        trace("Byte2", 1, byte2);
+        trace("Byte3", 1, byte3);
+        trace("Byte4", 1, byte4);
+        let data: u32 = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
         return data;
     }
 
     read16(address: u32, accessor: MemoryAccessor): u16 {
-        let byte1 = cartData[address];
-        let byte2 = cartData[address + 1];
-        let data = (byte2 << 8) | byte1;
+        let byte1: u32 = cartData[address];
+        let byte2: u32 = cartData[address + 1];
+        let data: u16 = u16((byte2 << 8) | byte1);
         return data;
     }
 
