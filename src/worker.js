@@ -4,6 +4,7 @@ import loader from '@assemblyscript/loader';
 var frames = 0;
 var lastFrameTime;
 var time;
+var things = {};
 
 loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
     bridge: {
@@ -26,8 +27,13 @@ loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
         },
         endFrame: () => {
         },
+        "console.log": (msg) => { console.log(things.wasm.exports.__getString(msg)) }
+
     }
 }).then((wasm) => {
+    things.wasm = wasm;
+    console.log(wasm);
+    wasm.exports._start();
     onmessage = function (e) {
         let arry = e.data;
         let view = wasm.exports.__getUint8ArrayView(wasm.exports.getCartData());
