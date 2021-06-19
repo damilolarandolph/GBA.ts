@@ -4,8 +4,10 @@ import MemoryMap from "../memory/memory-map";
 export default class PaletteRam implements MemoryMap {
     // 1K ?
     private data: Uint8Array = new Uint8Array(1000);
+    private offset: u32 = 0x05000000;
 
     read32(address: u32, accessor: MemoryAccessor): u32 {
+        address -= this.offset;
         let byte1 = this.data[address];
         let byte2 = this.data[address + 1];
         let byte3 = this.data[address + 2];
@@ -15,6 +17,7 @@ export default class PaletteRam implements MemoryMap {
     }
 
     read16(address: u32, accessor: MemoryAccessor): u16 {
+        address -= this.offset;
         let byte1 = this.data[address];
         let byte2 = this.data[address + 1];
         let data = (byte2 << 8) | byte1;
@@ -30,6 +33,7 @@ export default class PaletteRam implements MemoryMap {
     }
 
     write16(address: u32, accessor: MemoryAccessor, value: u16): void {
+        address -= this.offset;
         this.data[address] = value & 0xff;
         value >>>= 8;
         this.data[address + 1] = value & 0xff;

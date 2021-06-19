@@ -1,8 +1,15 @@
 import MemoryAccessor from "../memory/memory-accessor";
 import MemoryMap from "../memory/memory-map";
+import { VideoUnitRegisters } from './video-controller';
 
 export default class VRAM implements MemoryMap {
     private data: Uint8Array = new Uint8Array(96000);
+    private registers: VideoUnitRegisters;
+
+    constructor(regs: VideoUnitRegisters) { this.registers = regs };
+
+    
+
 
     read32(address: u32, accessor: MemoryAccessor): u32 {
         let byte1 = this.data[address];
