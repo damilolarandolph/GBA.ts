@@ -99,7 +99,7 @@ export function rori(cpu: ARM7CPU): void {
         return;
     }
 
-    operand = (rmVal << (31 - shiftImm)) | rmVal >> shiftImm;
+    operand = (rmVal << (32 - shiftImm)) | rmVal >> shiftImm;
     shifterOut = u32(getBit(rmVal, shiftImm - 1));
 }
 
@@ -122,7 +122,7 @@ export function rorr(instruction: u32, cpu: ARM7CPU): void {
         return;
     }
 
-    operand = (rmVal << (31 - rsVal)) | rmVal >> rsVal;
+    operand = (rmVal << (32 - rsVal)) | rmVal >> rsVal;
     shifterOut = u32(getBit(rmVal, u32(rsVal & 0x1f) - 1));
 }
 
@@ -213,7 +213,7 @@ export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): void {
 }
 
 export function rotateRight(bits: u32, amount: u32, cpu: ARM7CPU): void {
-    let result = (bits << u32(31 - amount)) | bits >>> u32(amount);
+    let result = (bits << u32(32 - amount)) | bits >>> u32(amount);
 
     if (amount == 0) {
         operand = result;
