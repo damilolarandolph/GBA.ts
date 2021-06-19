@@ -96,31 +96,37 @@ export function ADDC(cpu: ARM7CPU): void {
 }
 
 export function ADD(cpu: ARM7CPU): void {
-    switch (cpu.instructionStage) {
-        case 0:
-            if (!testCondition(cpu)) {
-                cpu.finish();
-                return;
-            }
-            deduceAddressing(cpu);
-        default:
-            let instruction = cpu.currentInstruction;
-            let rd = getBits(instruction, 15, 12);
-            let rn = getBits(instruction, 19, 16);
-            let rnVal = cpu.readRegister(rn);
-            let sBit = getBit(instruction, 20);
-            let result = rnVal + operand;
-            cpu.writeRegister(rd, result);
-            if (sBit && rd == 15) {
-                cpu.CPSR = cpu.SPSR;
-            } else {
-                cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-                cpu.setFlag(StatusFlags.ZERO, result == 0);
-                cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, operand));
-                cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, operand));
-            }
+    if (cpu.instructionStage == 0) {
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
+        deduceAddressing(cpu);
+        cpu.instructionStage = 1;
     }
-    cpu.finish();
+    if (cpu.instructionStage == 1) {
+
+        let instruction = cpu.currentInstruction;
+        let rd = getBits(instruction, 15, 12);
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let sBit = getBit(instruction, 20);
+        let result = rnVal + operand;
+        cpu.writeRegister(rd, result);
+        if (!sBit) {
+            cpu.finish();
+            return;
+        }
+        if (rd == 15) {
+            cpu.CPSR = cpu.SPSR;
+        } else {
+            cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
+            cpu.setFlag(StatusFlags.ZERO, result == 0);
+            cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, operand));
+            cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, operand));
+        }
+        cpu.finish();
+    }
 }
 
 
