@@ -1,5 +1,5 @@
 {
-  "name": "GBA.ts",
+  "name": "gba.as",
   "version": "1.0.0",
   "description": "A Gameboy Advance Emulator, written in TypeScript.",
   "main": "index.js",
@@ -7,20 +7,22 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
-    "@assemblyscript/loader": "^0.18.32",
-    "@snowpack/plugin-typescript": "^1.2.1",
-    "autoprefixer": "^10.2.6",
+    "@assemblyscript/loader": "^0.19.3",
     "comlink": "^4.3.1",
     "regl": "^2.1.0",
-    "typescript": "^4.2.4"
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
   },
   "scripts": {
     "asbuild:untouched": "asc assembly/index.ts --target debug",
-    "asbuild:optimized": "asc assembly/index.ts --target release",
+    "asbuild:optimized": "asc assembly/index.ts  --target release",
     "dev": "webpack serve",
     "asbuild:watch": "onchange -i 'assembly/**/*' -- yarn asbuild:untouched",
     "asbuild": "yarn asbuild:untouched && yarn asbuild:optimized",
-    "test": "node tests"
+    "start": "razzle start",
+    "build": "razzle build",
+    "test": "razzle test --env=jsdom",
+    "start:prod": "serve -s build/public"
   },
   "devDependencies": {
     "assemblyscript": "^0.18.32",
@@ -28,8 +30,13 @@
     "postcss": "^8.3.0",
     "postcss-cli": "^8.3.1",
     "tailwindcss": "^2.1.2",
-    "webpack": "^5.38.1",
-    "webpack-cli": "^4.7.0",
+    "babel-preset-razzle": "4.0.4",
+    "html-webpack-plugin": "5.2.0",
+    "mini-css-extract-plugin": "^0.9.0",
+    "razzle": "^4.0.4",
+    "razzle-dev-utils": "^4.0.4",
+    "serve": "^11.3.2",
+    "webpack": "5.24.0",
     "webpack-dev-server": "^3.11.2"
   }
 }

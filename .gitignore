@@ -2,3 +2,5 @@
 *.log
 /public/js
 /public/wasm
+/build
+/cache
