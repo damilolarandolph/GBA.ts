@@ -1,6 +1,5 @@
 import { getBit, getBits } from "../../../utils/bits";
-import { ARM7CPU, CPU_MODES } from "../../cpu";
-import { StatusFlags } from "../../registers";
+import { ARM7CPU, CPU_MODES, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, operand, rori, rorr, rotateRight, shifterOut } from "./address-modes";
 
