@@ -1,6 +1,5 @@
 import { getBit, getBits } from "../../../utils/bits";
-import { ARM7CPU } from "../../cpu";
-import { StatusFlags } from "../../registers";
+import { ARM7CPU, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 
 

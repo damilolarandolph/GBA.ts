@@ -1,6 +1,6 @@
 import { countSetBits, getBit, getBits } from "../../../utils/bits";
-import { ARM7CPU, CPU_MODES } from "../../cpu";
-import { StatusFlags } from "../../registers";
+import { ARM7CPU, CPU_MODES, StatusFlags } from "../../cpu";
+
 import { testCondition } from "../instructions";
 
 //export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];

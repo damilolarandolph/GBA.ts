@@ -1,6 +1,5 @@
 import { getBit, getBits, setBit } from "../../../utils/bits";
-import { ARM7CPU, CPU_MODES } from "../../cpu";
-import { StatusFlags } from "../../registers";
+import { ARM7CPU, CPU_MODES, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 import { immedOffRegAddr, immedPostIndexed, immedPreIndexed, ldmDecrAfter, ldmDecrBefor, ldmEndAddr, ldmIncrAfter, ldmIncrBefore, ldmStartAddr, loadStrAddr, miscImmedOffset, miscImmedOffsetPostIndexed, miscImmedOffsetPreIndexed, operand, regOffPostIndexed, regOffPreIndexed, regOffRegAddr, rotateRight, scaledRegOff, scaledRegOffPostIndex, scaledRegOffPreIndex } from "./address-modes";
 
