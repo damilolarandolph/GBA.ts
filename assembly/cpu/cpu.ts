@@ -46,6 +46,7 @@ export class ARM7CPU implements MemoryAccessor {
     constructor(memoryMap: MemoryMap, interruptManager: InterruptManager) {
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
+        this.mode = CPU_MODES.USR;
         this.PC = 0x08000000
         this._bankedRegisters.set(CPU_MODES.SVC, new StaticArray(2));
         this._bankedRegisters.set(CPU_MODES.ABT, new StaticArray(2));
@@ -98,18 +99,18 @@ export class ARM7CPU implements MemoryAccessor {
     private prefetch(): void {
         if (this._opcodeQueue.length > 0) {
             let currentInstruction = this._opcodeQueue.peek();
-            trace("Pushing Instruction", 1, currentInstruction);
+            // trace("Pushing Instruction", 1, currentInstruction);
             let row = getBits(currentInstruction, 27, 20);
             let col = getBits(currentInstruction, 7, 4);
-            trace("ROW AND COL", 2, row, col);
+            //trace("ROW AND COL", 2, row, col);
             let postition = row * 16 + col;
-            trace("POSTION", 1, postition)
+            //trace("POSTION", 1, postition)
             this._instructionQueue.enqueue(armOpTable[postition]);
         }
 
         this._opcodeQueue.enqueue(this.read32(this.PC));
         this.PC += 4;
-        trace("Program Counter is now", 1, this.PC);
+        // trace("Program Counter is now", 1, this.PC);
     }
 
     set instructionStage(stage: u32) {
@@ -226,7 +227,8 @@ export class ARM7CPU implements MemoryAccessor {
     }
 
     set mode(val: CPU_MODES) {
-        this.CPSR &= val;
+        let newCpsr = (this.CPSR & ~(u32(0x1f))) | val
+        this.CPSR = newCpsr;
     }
 
     flagVal(flag: StatusFlags): u32 {
