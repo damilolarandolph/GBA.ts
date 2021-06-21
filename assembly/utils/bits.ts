@@ -1,15 +1,13 @@
 
-const MAX_32 = 0xffffffff;
+const MAX_32: u32 = 0xffffffff;
 
 export function setBit(data: u32, bitPos: u32, value: boolean): u32 {
-
+    let clearBit = ~(u32(1) << bitPos);
+    data &= clearBit;
     if (value) {
-        let setBit = u32(1) << bitPos;
-        return u32(data || setBit);
-    } else {
-        let clearBit = ~(u32(1) << bitPos);
-        return u32(data & clearBit);
+        data |= (~clearBit);
     }
+    return data;
 
 }
 
