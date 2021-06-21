@@ -11,25 +11,21 @@ export function BBL(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let lBit = getBit(24, instruction);
     let targetAddr: u32 = getBits(instruction, 23, 0);
-    trace("Branch ADDR", 1, targetAddr);
     // Left align 24 bits
     targetAddr <<= 8;
     //Sign extend and shift to left by 2
     targetAddr = u32(<i32>targetAddr >> 6);
 
-    trace("Branch Addr Shifted", 1, targetAddr);
     if (lBit) {
         cpu.writeRegister(14, cpu.PC - 4);
     }
     let addr: u32;
-
     if (getBit(targetAddr, 31)) {
-        addr = cpu.readRegister(15) - (~targetAddr);
+        addr = cpu.readRegister(15) - ((~targetAddr) + 1);
     } else {
         addr = cpu.readRegister(15) + targetAddr;
     }
 
-    trace("Branch Addr", 1, addr);
     cpu.writeRegister(15, addr);
     cpu.finish();
 
