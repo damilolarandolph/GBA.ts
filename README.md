@@ -1,6 +1,7 @@
-# GBA.as
+<h1 style="text-align: center"> GBA.as </h1>
+<p style="text-align: center; margin-bottom: 50px">Definitely not a WebAssembly Gameboy advance emulator 🚀<p>
 
-GBA.as is a Gameboy Adavance emulator in WebAssembly with AssemblyScript .
+
 
 
 
