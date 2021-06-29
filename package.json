@@ -9,9 +9,9 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.19.3",
     "comlink": "^4.3.1",
-    "regl": "^2.1.0",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "regl": "^2.1.0"
   },
   "scripts": {
     "asbuild:untouched": "asc assembly/index.ts --target debug",
@@ -19,23 +19,26 @@
     "dev": "webpack serve",
     "asbuild:watch": "onchange -i 'assembly/**/*' -- yarn asbuild:untouched",
     "asbuild": "yarn asbuild:untouched && yarn asbuild:optimized",
+    "asbuild:test": "asp --verbose",
+    "asbuild:test:ci": "asp --summary",
     "start": "razzle start",
     "build": "razzle build",
     "test": "razzle test --env=jsdom",
     "start:prod": "serve -s build/public"
   },
   "devDependencies": {
+    "@as-pect/cli": "^6.2.4",
     "assemblyscript": "^0.18.32",
-    "onchange": "^7.1.0",
-    "postcss": "^8.3.0",
-    "postcss-cli": "^8.3.1",
-    "tailwindcss": "^2.1.2",
     "babel-preset-razzle": "4.0.4",
     "html-webpack-plugin": "5.2.0",
     "mini-css-extract-plugin": "^0.9.0",
+    "onchange": "^7.1.0",
+    "postcss": "^8.3.0",
+    "postcss-cli": "^8.3.1",
     "razzle": "^4.0.4",
     "razzle-dev-utils": "^4.0.4",
     "serve": "^11.3.2",
+    "tailwindcss": "^2.1.2",
     "webpack": "5.24.0",
     "webpack-dev-server": "^3.11.2"
   }

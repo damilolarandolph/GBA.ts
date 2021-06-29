@@ -5,3 +5,5 @@
 /build
 /cache
 *.code-workspace
+**/__tests__/**/*.map
+**/__tests__/**/*.wat
