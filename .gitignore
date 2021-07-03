@@ -7,3 +7,6 @@
 *.code-workspace
 **/__tests__/**/*.map
 **/__tests__/**/*.wat
+**/__tests__/**/resources/
+**/__tests__/**/cpu/log-tests
+log-arrays.js

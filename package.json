@@ -19,7 +19,7 @@
     "dev": "webpack serve",
     "asbuild:watch": "onchange -i 'assembly/**/*' -- yarn asbuild:untouched",
     "asbuild": "yarn asbuild:untouched && yarn asbuild:optimized",
-    "asbuild:test": "asp --verbose",
+    "asbuild:test": "asp  --workers 6 --summary",
     "asbuild:test:ci": "asp --summary",
     "start": "razzle start",
     "build": "razzle build",
