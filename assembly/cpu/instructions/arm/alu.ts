@@ -36,6 +36,7 @@ export function deduceAddressing(cpu: ARM7CPU): void {
     let immediateFlag = getBit(currentInstruction, 25);
     if (immediateFlag) {
         dataProcImmediate(currentInstruction, cpu);
+        trace("ALU OPERAND", 1, operand);
         return;
     }
 
@@ -61,6 +62,8 @@ export function deduceAddressing(cpu: ARM7CPU): void {
         else if (shiftType == 3)
             rori(cpu);
     }
+
+    trace("ALU OPERAND", 1, operand);
 
 }
 
@@ -132,30 +135,31 @@ export function ADD(cpu: ARM7CPU): void {
 
 
 export function AND(cpu: ARM7CPU): void {
-    switch (cpu.instructionStage) {
-        case 0:
-            if (!testCondition(cpu)) {
-                cpu.finish();
-                return;
-            }
-            deduceAddressing(cpu);
-        default:
-            let instruction = cpu.currentInstruction;
-            let rd = getBits(instruction, 15, 12);
-            let rn = getBits(instruction, 19, 16);
-            let rnVal = cpu.readRegister(rn);
-            let sBit = getBit(instruction, 20);
-            let result = rnVal & operand;
-            cpu.writeRegister(rd, result);
-            if (sBit && rd == 15) {
-                cpu.CPSR = cpu.SPSR;
-            } else {
-                cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-                cpu.setFlag(StatusFlags.ZERO, result == 0);
-                cpu.setFlag(StatusFlags.CARRY, shifterOut == 0 ? false : true);
-            }
+    if (cpu.instructionStage == 0) {
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
+        deduceAddressing(cpu);
+        cpu.instructionStage = 1;
     }
-    cpu.finish();
+    if (cpu.instructionStage == 1) {
+        let instruction = cpu.currentInstruction;
+        let rd = getBits(instruction, 15, 12);
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let sBit = getBit(instruction, 20);
+        let result = rnVal & operand;
+        cpu.writeRegister(rd, result);
+        if (sBit && rd == 15) {
+            cpu.CPSR = cpu.SPSR;
+        } else {
+            cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
+            cpu.setFlag(StatusFlags.ZERO, result == 0);
+            cpu.setFlag(StatusFlags.CARRY, shifterOut == 0 ? false : true);
+        }
+        cpu.finish();
+    }
 }
 
 
@@ -199,7 +203,7 @@ export function CMN(cpu: ARM7CPU): void {
             let instruction = cpu.currentInstruction;
             let rn = getBits(instruction, 19, 16);
             let rnVal = cpu.readRegister(rn);
-            let result = i32(rnVal) + i32(operand);
+            let result = rnVal + operand;
             cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
             cpu.setFlag(StatusFlags.ZERO, result == 0);
             cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, operand));
@@ -210,22 +214,23 @@ export function CMN(cpu: ARM7CPU): void {
 
 
 export function CMP(cpu: ARM7CPU): void {
-    switch (cpu.instructionStage) {
-        case 0:
-            if (!testCondition(cpu)) {
-                cpu.finish();
-                return;
-            };
-            deduceAddressing(cpu);
-        default:
-            let instruction = cpu.currentInstruction;
-            let rn = getBits(instruction, 19, 16);
-            let rnVal = cpu.readRegister(rn);
-            let result = i32(rnVal) - i32(operand);
-            cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-            cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, operand));
-            cpu.setFlag(StatusFlags.CARRY, signOverflowFrom(rnVal, i32(operand) * -1));
+    if (cpu.instructionStage == 0) {
+        if (!testCondition(cpu)) {
+            cpu.finish();
+            return;
+        }
+        deduceAddressing(cpu);
+        cpu.instructionStage = 1;
+    }
+    if (cpu.instructionStage == 1) {
+        let instruction = cpu.currentInstruction;
+        let rn = getBits(instruction, 19, 16);
+        let rnVal = cpu.readRegister(rn);
+        let result = rnVal - operand;
+        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, operand));
+        cpu.setFlag(StatusFlags.CARRY, signOverflowFrom(rnVal, i32(operand) * -1));
     }
     cpu.finish();
 }

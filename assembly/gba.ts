@@ -1,4 +1,3 @@
-import { endFrame, startFrame } from "./bridge";
 import * as cpu from "./cpu/cpu";
 import * as ops from './cpu/instructions/initialize';
 import InterruptManager from "./cpu/interrupt-manager";
@@ -10,9 +9,10 @@ import { WRAM1, WRAM2 } from "./memory/WRAM";
 import { OAM } from "./video/oam";
 import PaletteRam from "./video/palette-ram";
 import { VideoController, VideoUnitRegisters } from "./video/video-controller";
+export { cartData } from './gamepak/gamepak';
 import VRAM from "./video/vram";
-export default class GBA {
-    private cpu: cpu.ARM7CPU;
+export class GBA {
+    private cpu: cpu.CPU;
     private videoUnit: VideoController;
     private gamePak: GamePak = new GamePak();
     private systemMemory: SystemMemory;
@@ -45,7 +45,7 @@ export default class GBA {
             this.IOMap,
             this.gamePak,
             this.videoUnit);
-        this.cpu = new cpu.ARM7CPU(
+        this.cpu = new cpu.CPU(
             this.systemMemory,
             this.interruptManager);
     }
@@ -63,7 +63,23 @@ export default class GBA {
         return 0;
     }
 
+
     bios(): BIOS {
         return this.BIOS;
+    }
+
+    step(): void {
+        if (this.cpu.handlerQueued()) {
+            this.cpu.tick();
+        }
+
+        while (!this.cpu.handlerQueued()) {
+            this.cpu.tick();
+        }
+    }
+
+    getCPU(): cpu.CPU {
+        return this.cpu;
+
     }
 }

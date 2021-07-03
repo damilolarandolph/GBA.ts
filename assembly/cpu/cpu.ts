@@ -4,7 +4,7 @@ import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
 import { armOpTable, opHandler } from './instructions/initialize';
 import InterruptManager from './interrupt-manager';
-import { console } from '.././bridge';
+//import { console } from '.././bridge';
 
 export enum CPU_MODES {
     USR = 0x10,
@@ -35,6 +35,12 @@ export abstract class ARM7CPU implements MemoryAccessor {
     abstract get instructionStage(): u32;
 
     abstract get currentInstruction(): u32
+
+    abstract get pipelining(): boolean;
+
+    abstract set pipelining(val: boolean);
+
+    abstract handlerQueued(): boolean;
 
     readRegister(regNo: i32, mode: CPU_MODES = 0): u32 {
         throw new Error("UNIMPLEMENTED");
@@ -94,6 +100,7 @@ export class CPU extends ARM7CPU {
     private _currentHandler: opHandler | null = null
     private _currentOp: u32 = 0;
     private interuptManager: InterruptManager;
+    private _pipelining: boolean;
     private _cspr: u32;
     private _registers: StaticArray<u32> = new StaticArray(16);
     private _currentMode: CPU_MODES = CPU_MODES.USR;
@@ -128,6 +135,7 @@ export class CPU extends ARM7CPU {
         }
 
         if (this.instructionStage == 0) {
+
             if (!this._instructionQueue.isEmpty) {
                 this._currentHandler = this._instructionQueue.dequeue();
                 this._currentOp = this._opcodeQueue.dequeue();
@@ -139,7 +147,7 @@ export class CPU extends ARM7CPU {
 
         if (this._currentHandler != null) {
             if (this.instructionStage == 0) {
-                this.logState();
+                // this.logState();
             }
             (this._currentHandler as opHandler)(this);
             if (this.instructionStage == 0) {
@@ -151,8 +159,20 @@ export class CPU extends ARM7CPU {
 
     }
 
+    handlerQueued(): boolean {
+        return !this._instructionQueue.isEmpty;
+    }
+
     enqueuePipeline(func: opHandler): void {
         this._instructionQueue.enqueue(func);
+    }
+
+    get pipelining(): boolean {
+        return this._pipelining;
+    }
+
+    set pipelining(val: boolean) {
+        this._pipelining = val;
     }
 
     private prefetch(): void {
@@ -220,19 +240,19 @@ export class CPU extends ARM7CPU {
         this._registers[regNo] = value;
     }
 
-    private logState(): void {
-        let row = getBits(this._currentOp, 27, 20);
-        let col = getBits(this._currentOp, 7, 4);
-        console.log(`
-        R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
-        R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
-        R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
-        R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
-        PC: ${this.toHexString(this.readRegister(15))} PC (adjusted): ${this.toHexString(this.readRegister(15) - 8)}
-        FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
-        OPCODE: ${this.toHexString(this._currentOp)} ROW: ${this.toHexString(row)} COL: ${this.toHexString(col)}
-        `);
-    }
+    // private logState(): void {
+    //     let row = getBits(this._currentOp, 27, 20);
+    //     let col = getBits(this._currentOp, 7, 4);
+    //     console.log(`
+    //     R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
+    //     R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
+    //     R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
+    //     R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
+    //     PC: ${this.toHexString(this.readRegister(15))} PC (adjusted): ${this.toHexString(this.readRegister(15) - 8)}
+    //     FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
+    //     OPCODE: ${this.toHexString(this._currentOp)} ROW: ${this.toHexString(row)} COL: ${this.toHexString(col)}
+    //     `);
+    // }
 
     private toHexString(value: u32): string {
         return `0x${value.toString(16).toUpperCase()}`;
