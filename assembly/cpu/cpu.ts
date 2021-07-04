@@ -26,72 +26,8 @@ export enum StatusFlags {
     THUMB_MODE = 5
 }
 
-export abstract class ARM7CPU implements MemoryAccessor {
 
-    abstract tick(): void;
-
-    abstract set instructionStage(stage: u32);
-
-    abstract get instructionStage(): u32;
-
-    abstract get currentInstruction(): u32
-
-    abstract get pipelining(): boolean;
-
-    abstract set pipelining(val: boolean);
-
-    abstract handlerQueued(): boolean;
-
-    readRegister(regNo: i32, mode: CPU_MODES = 0): u32 {
-        throw new Error("UNIMPLEMENTED");
-    }
-
-    writeRegister(regNo: i32, val: u32, mode: CPU_MODES = 0): void {
-
-        throw new Error("UNIMPLEMENTED");
-    }
-
-    abstract finish(): void
-
-    abstract get CPSR(): u32
-
-    abstract get SPSR(): u32
-
-    abstract set SPSR(val: u32);
-
-    abstract set CPSR(data: u32);
-
-    abstract isFlag(flag: StatusFlags): boolean;
-
-    abstract get mode(): CPU_MODES;
-
-    abstract set mode(val: CPU_MODES);
-
-    abstract flagVal(flag: StatusFlags): u32;
-
-    abstract setFlag(flag: StatusFlags, value: boolean): void;
-
-    abstract addWaitStates(val: number): void;
-
-    abstract get PC(): u32;
-
-    abstract set PC(value: u32);
-
-    abstract read32(address: u32): u32;
-
-    abstract read16(address: u32): u16;
-
-    abstract read8(address: u32): u8
-
-    abstract write8(address: u32, value: u8): void
-
-    abstract write16(address: u32, value: u16): void
-
-    abstract write32(address: u32, value: u32): void
-}
-
-
-export class CPU extends ARM7CPU {
+export class ARM7CPU implements MemoryAccessor {
     private _instructionQueue: Queue<opHandler | null> = new Queue<opHandler | null>(100);
     private _opcodeQueue: Queue<u32> = new Queue<u32>(100);
     private _waitStates: u32 = 0;
@@ -109,7 +45,6 @@ export class CPU extends ARM7CPU {
 
 
     constructor(memoryMap: MemoryMap, interruptManager: InterruptManager) {
-        super();
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
         this.mode = CPU_MODES.USR;
@@ -228,14 +163,18 @@ export class CPU extends ARM7CPU {
         return this._registers[regNo];
     }
     private writeRegMode(regNo: i32, value: u32, mode: CPU_MODES): void {
+
+
         if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
             let index = regNo - 8;
             this._bankedRegisters.get(CPU_MODES.FIQ)[i32(index)] = value;
+            return;
         }
 
         if ((mode != CPU_MODES.USR && mode != CPU_MODES.SYS) && regNo >= 13 && regNo < 15) {
             let index = regNo - 13;
             this._bankedRegisters.get(mode)[i32(index)] = value;
+            return;
         }
         this._registers[regNo] = value;
     }

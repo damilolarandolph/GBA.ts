@@ -12,7 +12,7 @@ import { VideoController, VideoUnitRegisters } from "./video/video-controller";
 export { cartData } from './gamepak/gamepak';
 import VRAM from "./video/vram";
 export class GBA {
-    private cpu: cpu.CPU;
+    private cpu: cpu.ARM7CPU;
     private videoUnit: VideoController;
     private gamePak: GamePak = new GamePak();
     private systemMemory: SystemMemory;
@@ -45,7 +45,7 @@ export class GBA {
             this.IOMap,
             this.gamePak,
             this.videoUnit);
-        this.cpu = new cpu.CPU(
+        this.cpu = new cpu.ARM7CPU(
             this.systemMemory,
             this.interruptManager);
     }
@@ -78,7 +78,7 @@ export class GBA {
         }
     }
 
-    getCPU(): cpu.CPU {
+    getCPU(): cpu.ARM7CPU {
         return this.cpu;
 
     }
