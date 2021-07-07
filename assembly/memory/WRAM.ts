@@ -61,19 +61,19 @@ export class WRAM2 implements MemoryMap {
 
     read32(address: u32, accessor: MemoryAccessor): u32 {
         address -= this.startAddr;
-        let byte1 = this.data[address];
-        let byte2 = this.data[address + 1];
-        let byte3 = this.data[address + 2];
-        let byte4 = this.data[address + 3];
-        let data = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
+        let byte1: u32 = this.data[address];
+        let byte2: u32 = this.data[address + 1];
+        let byte3: u32 = this.data[address + 2];
+        let byte4: u32 = this.data[address + 3];
+        let data: u32 = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
         return data;
     }
 
     read16(address: u32, accessor: MemoryAccessor): u16 {
         address -= this.startAddr
-        let byte1 = this.data[address];
-        let byte2 = this.data[address + 1];
-        let data = (byte2 << 8) | byte1;
+        let byte1: u16 = this.data[address];
+        let byte2: u16 = this.data[address + 1];
+        let data: u16 = (byte2 << 8) | byte1;
         return data;
     }
 
