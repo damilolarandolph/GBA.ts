@@ -58,23 +58,29 @@ export function deduceMiscAddressing(cpu: ARM7CPU): u32 {
     let wBit = getBit(currentInstruction, 21);
     let immBit = getBit(currentInstruction, 22);
 
-    if (!wBit) {
-        if (immBit)
-            return miscImmedOffset(cpu);
-        else
-            return regOffRegAddr(cpu);
-    } else if (pBit) {
-        if (immBit)
-            return miscImmedOffsetPreIndexed(cpu);
-        else
-            return regOffPreIndexed(cpu);
-    } else {
-        if (immBit)
+    if (!pBit) {
+        if (immBit) {
             return miscImmedOffsetPostIndexed(cpu);
-        else
+        } else {
             return regOffPostIndexed(cpu);
+        }
+    } else {
+        if (wBit) {
+            if (immBit) {
+                return miscImmedOffsetPreIndexed(cpu);
+            } else {
+                return regOffPreIndexed(cpu);
+            }
+        } else {
+            if (immBit) {
+                return miscImmedOffset(cpu);
+            } else {
+                return regOffRegAddr(cpu);
+            }
+        }
     }
 }
+
 
 export function LDM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
@@ -235,6 +241,7 @@ export function LDRH(cpu: ARM7CPU): void {
 export function STRH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
+    trace('STRH', 1, addr);
     cpu.write16(addr, u16(cpu.readRegister(rd) & 0xffff));
 }
 
