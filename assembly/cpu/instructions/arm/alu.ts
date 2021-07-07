@@ -37,7 +37,6 @@ export function deduceAddressing(cpu: ARM7CPU): ShifterOutput {
     let immediateFlag = getBit(currentInstruction, 25);
     if (immediateFlag) {
         return dataProcImmediate(currentInstruction, cpu);
-        //   trace("ALU OPERAND", 1, operand);
     }
 
     let shiftRegFlag = getBit(currentInstruction, 4);
@@ -258,31 +257,43 @@ export function MSR(cpu: ARM7CPU): void {
         msrOP = cpu.readRegister(getBits(cpu.currentInstruction, 3, 0));
     }
 
-    if (Rbit) {
-        if (cpu.mode == CPU_MODES.USR) { return; }
+    if (!Rbit) {
+
+        let newcspr = cpu.CPSR;
+        if (getBit(fieldMask, 3)) {
+            let mask = getBits(msrOP, 31, 24);
+            mask = mask << 24;
+            let maskInvert = u32(0xff) << 24;
+            maskInvert = ~maskInvert;
+            newcspr = (newcspr & maskInvert) | mask;
+        }
+        if (cpu.mode == CPU_MODES.USR || cpu.mode == CPU_MODES.SYS) {
+            cpu.CPSR = newcspr;
+            return;
+        }
         if (getBit(fieldMask, 0)) {
-            cpu.CPSR &= (msrOP & 0xf);
+            let mask = msrOP & 0xf;
+            newcspr = newcspr & mask;
         }
 
         if (getBit(fieldMask, 1)) {
-            let mask = ~(u32(0xff) << 8);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 8;
-            cpu.CPSR = mask;
+            let mask = getBits(msrOP, 15, 8);
+            mask = mask << 8;
+            let maskInvert = u32(0xff) << 8;
+            maskInvert = ~maskInvert
+            newcspr = (newcspr & maskInvert) | mask;
         }
 
         if (getBit(fieldMask, 2)) {
-            let mask = ~(u32(0xff) << 16);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 16;
-            cpu.CPSR = mask;
+            let mask = getBits(msrOP, 23, 16);
+            mask = mask << 16;
+            let maskInvert = u32(0xff) << 16;
+            maskInvert = ~maskInvert
+            newcspr = (newcspr & maskInvert) | mask;
         }
-        if (getBit(fieldMask, 3)) {
-            let mask = ~(u32(0xff) << 24);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 24;
-            cpu.CPSR = mask;
-        }
+
+        cpu.CPSR = newcspr;
+
 
     } else {
         if (cpu.mode == CPU_MODES.USR || cpu.mode == CPU_MODES.SYS) { }
@@ -462,7 +473,7 @@ export function TEQ(cpu: ARM7CPU): void {
     let result = cpu.readRegister(rn) ^ shifterOutput.operand;
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0);
+    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
 }
 
 export function TST(cpu: ARM7CPU): void {
@@ -473,7 +484,7 @@ export function TST(cpu: ARM7CPU): void {
     let result = cpu.readRegister(rn) & shifterOutput.operand;
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0);
+    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
 }
 
 
