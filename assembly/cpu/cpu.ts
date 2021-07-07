@@ -1,8 +1,10 @@
+import { GBA } from '../gba';
 import MemoryAccessor from '../memory/memory-accessor';
 import MemoryMap from '../memory/memory-map';
 import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
-import { armOpTable, opHandler } from './instructions/initialize';
+import { armOpTable, opHandler } from './instructions/arm-op-table';
+import { testCondition } from './instructions/instructions';
 import InterruptManager from './interrupt-manager';
 //import { console } from '.././bridge';
 
@@ -28,27 +30,21 @@ export enum StatusFlags {
 
 
 export class ARM7CPU implements MemoryAccessor {
-    private _instructionQueue: Queue<opHandler | null> = new Queue<opHandler | null>(100);
-    private _opcodeQueue: Queue<u32> = new Queue<u32>(100);
-    private _waitStates: u32 = 0;
-    private _instructionStage: u32 = 0;
+    private _opQueue: Queue<u32> = new Queue<u32>(10);
     private _memoryMap: MemoryMap;
-    private _currentHandler: opHandler | null = null
     private _currentOp: u32 = 0;
     private interuptManager: InterruptManager;
-    private _pipelining: boolean;
     private _cspr: u32;
     private _registers: StaticArray<u32> = new StaticArray(16);
     private _currentMode: CPU_MODES = CPU_MODES.USR;
     private _bankedRegisters: Map<CPU_MODES, StaticArray<u32>> = new Map();
     private _SPSRs: Map<CPU_MODES, u32> = new Map();
+    private _currentCycles: u32 = 0;
 
 
     constructor(memoryMap: MemoryMap, interruptManager: InterruptManager) {
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
-        this.mode = CPU_MODES.USR;
-        this.PC = 0x08000000
         this._bankedRegisters.set(CPU_MODES.SVC, new StaticArray(2));
         this._bankedRegisters.set(CPU_MODES.ABT, new StaticArray(2));
         this._bankedRegisters.set(CPU_MODES.UND, new StaticArray(2));
@@ -60,85 +56,74 @@ export class ARM7CPU implements MemoryAccessor {
         this._SPSRs.set(CPU_MODES.UND, 0);
         this._SPSRs.set(CPU_MODES.IRQ, 0);
         this._SPSRs.set(CPU_MODES.FIQ, 0);
+
+        this.emulateBIOS();
+    }
+
+    private emulateBIOS(): void {
+        this.writeRegister(0, 0x8000000);
+        this.writeRegister(1, 0x000000EA);
+        this.writeRegister(2, 0);
+        this.writeRegister(3, 0);
+        this.writeRegister(4, 0);
+        this.writeRegister(5, 0);
+        this.writeRegister(6, 0);
+        this.writeRegister(7, 0);
+        this.writeRegister(8, 0);
+        this.writeRegister(9, 0);
+        this.writeRegister(10, 0);
+        this.writeRegister(11, 0);
+        this.writeRegister(12, 0);
+        this.writeRegister(13, 0x03007F00);
+        this.writeRegister(14, 0);
+        this.PC = 0x08000000
+        this.CPSR = 0x6000001F;
+    }
+
+    addCycles(val: u32): void {
     }
 
     tick(): void {
-
-        if (this._waitStates > 0) {
-            --this._waitStates
-            return;
+        if (this.canExecute()) {
+            this.execute();
+            this.prefetch();
+        } else {
+            this.prefetch()
         }
+    }
 
-        if (this.instructionStage == 0) {
+    execute(): void {
 
-            if (!this._instructionQueue.isEmpty) {
-                this._currentHandler = this._instructionQueue.dequeue();
-                this._currentOp = this._opcodeQueue.dequeue();
-            } else {
-                this.prefetch();
-            }
+        let op = this._opQueue.dequeue();
+        this._currentOp = op;
+        let handler = this.getOpHandler(this._currentOp);
+        if (testCondition(this)) {
+            handler(this);
         }
+    }
+
+    canExecute(): boolean {
+        return this._opQueue.length !== 0;
+    }
 
 
-        if (this._currentHandler != null) {
-            if (this.instructionStage == 0) {
-                // this.logState();
-            }
-            (this._currentHandler as opHandler)(this);
-            if (this.instructionStage == 0) {
-                this.prefetch()
-            }
 
+
+
+    public prefetch(): void {
+
+        while (this._opQueue.length < 2) {
+            this._opQueue.enqueue(this.read32(this.PC));
+            this.PC += 4;
         }
-
-
     }
 
-    handlerQueued(): boolean {
-        return !this._instructionQueue.isEmpty;
+    private getOpHandler(instruction: u32): opHandler {
+        let row = getBits(instruction, 27, 20);
+        let col = getBits(instruction, 7, 4);
+        return (armOpTable[row][col] as opHandler);
     }
 
-    enqueuePipeline(func: opHandler): void {
-        this._instructionQueue.enqueue(func);
-    }
-
-    get pipelining(): boolean {
-        return this._pipelining;
-    }
-
-    set pipelining(val: boolean) {
-        this._pipelining = val;
-    }
-
-    private prefetch(): void {
-        if (this._opcodeQueue.length > 0) {
-            let currentInstruction = this._opcodeQueue.peek();
-            // trace("Pushing Instruction", 1, currentInstruction);
-            let row = getBits(currentInstruction, 27, 20);
-            let col = getBits(currentInstruction, 7, 4);
-            //trace("ROW AND COL", 2, row, col);
-            let postition = row * 16 + col;
-            //trace("POSTION", 1, postition)
-            this._instructionQueue.enqueue(armOpTable[postition]);
-        }
-
-        this._opcodeQueue.enqueue(this.read32(this.PC));
-        this.PC += 4;
-        // trace("Program Counter is now", 1, this.PC);
-    }
-
-    set instructionStage(stage: u32) {
-        this._instructionStage = stage;
-    }
-
-    get instructionStage(): u32 {
-        return this._instructionStage;
-    }
-
-
-    dequeuePipeline(): opHandler {
-        return (this._instructionQueue.dequeue() as opHandler);
-    }
 
 
 
@@ -204,18 +189,10 @@ export class ARM7CPU implements MemoryAccessor {
         }
     }
 
-    finish(): void {
-        this._currentHandler = null;
-        this._currentOp = 0;
-        this._instructionStage = 0;
+    private clearPipeline(): void {
+        this._opQueue.flush();
     }
 
-    clearPipeline(): void {
-        this._opcodeQueue.flush();
-        this._instructionQueue.flush();
-        this._instructionStage = 0;
-        this._waitStates = 0;
-    }
 
 
     get CPSR(): u32 {
@@ -258,10 +235,6 @@ export class ARM7CPU implements MemoryAccessor {
     }
 
 
-
-    addWaitStates(val: number): void {
-
-    }
 
     get PC(): u32 {
         return this.readRegister(15);
