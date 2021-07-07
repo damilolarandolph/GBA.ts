@@ -86,27 +86,35 @@ export function LDM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 15, 0);
 
+    let currentAddress = multiAddrOutput.startAddress;
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
-            let currentAddr = multiAddrOutput.startAddress + (index * 4);
-            cpu.writeRegister(index, cpu.read32(currentAddr));
+            let readValue = cpu.read32(currentAddress);
+            cpu.writeRegister(index, readValue);
+            currentAddress += 4;
         }
     }
 
     if (getBit(regList, 15)) {
-        cpu.PC = cpu.read32(multiAddrOutput.startAddress + 60);
+        cpu.PC = cpu.read32(currentAddress) & 0xFFFFFFFC;
+        currentAddress += 4;
     }
+    assert(multiAddrOutput.endAddress == currentAddress - 4);
 }
 export function STM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 15, 0);
 
+    let currentAddress = multiAddrOutput.startAddress;
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
-            let currentAddr = multiAddrOutput.startAddress + (index * 4);
-            cpu.write32(currentAddr, cpu.readRegister(index));
+            let regValue = cpu.readRegister(index);
+            cpu.write32(currentAddress, regValue);
+            currentAddress += 4;
         }
     }
+
+    assert(multiAddrOutput.endAddress == currentAddress - 4);
 }
 
 export function LDM2(cpu: ARM7CPU): void {
@@ -116,28 +124,32 @@ export function LDM2(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 14, 0);
 
+    let currentAddress = multiAddrOutput.startAddress;
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
-            let currentAddr = multiAddrOutput.startAddress + (index * 4);
-            cpu.writeRegister(index, cpu.read32(currentAddr), CPU_MODES.USR);
+            cpu.writeRegister(index, cpu.read32(currentAddress), CPU_MODES.USR);
+            currentAddress += 4;
         }
+
     }
+
+    assert(multiAddrOutput.endAddress == currentAddress - 4);
 }
 
 export function STM2(cpu: ARM7CPU): void {
 
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 14, 0);
-    trace("Addr multiple", 2, multiAddrOutput.startAddress, multiAddrOutput.endAddress);
+    let currentAddress = multiAddrOutput.startAddress;
     for (let index = 0; index < 15; ++index) {
-        if ((regList & 0x1) != 0) {
-            let currentAddr = multiAddrOutput.startAddress + (index * 4);
-            trace("Curr addr", 1, currentAddr);
-            cpu.write32(currentAddr, cpu.readRegister(index, CPU_MODES.USR))
+        if (getBit(regList, index)) {
+            let rnVal = cpu.readRegister(index, CPU_MODES.USR);
+            cpu.write32(currentAddress, rnVal)
+            currentAddress += 4;
         }
-
-        regList >>>= 1;
     }
+
+    assert((currentAddress - 4) == multiAddrOutput.endAddress, "STM Addressing fail");
 }
 export function LDM3(cpu: ARM7CPU): void {
 
@@ -145,15 +157,15 @@ export function LDM3(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 15, 0);
 
+    let currentAddress = multiAddrOutput.startAddress;
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
-
-            let currentAddr = multiAddrOutput.startAddress + (index * 4);
-            cpu.writeRegister(index, cpu.read32(currentAddr), CPU_MODES.USR);
+            cpu.writeRegister(index, cpu.read32(currentAddress), CPU_MODES.USR);
+            currentAddress += 4;
         }
     }
     cpu.CPSR = cpu.SPSR;
-    let pcVal = cpu.read32(multiAddrOutput.startAddress + 60);
+    let pcVal = cpu.read32(currentAddress);
     if (cpu.isFlag(StatusFlags.THUMB_MODE)) {
         cpu.PC = pcVal & 0xFFFFFFFE;
     } else {
@@ -241,7 +253,6 @@ export function LDRH(cpu: ARM7CPU): void {
 export function STRH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
-    trace('STRH', 1, addr);
     cpu.write16(addr, u16(cpu.readRegister(rd) & 0xffff));
 }
 
