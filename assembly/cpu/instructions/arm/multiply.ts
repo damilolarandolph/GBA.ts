@@ -25,68 +25,42 @@ function deduceMStates(operand: u32): u32 {
 
 export function MLA(cpu: ARM7CPU): void {
 
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rd = getBits(cpu.currentInstruction, 19, 16);
     let rn = getBits(cpu.currentInstruction, 15, 12);
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let rs = getBits(cpu.currentInstruction, 11, 8);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)) + 1);
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)) + 1);
 
-    if (cpu.instructionStage == 2) {
-        let result = (cpu.readRegister(rm) * cpu.readRegister(rs)) + cpu.readRegister(rn);
-        cpu.writeRegister(rd, result);
+    let result = (cpu.readRegister(rm) * cpu.readRegister(rs)) + cpu.readRegister(rn);
+    cpu.writeRegister(rd, result);
 
-        if (getBit(cpu.currentInstruction, 20)) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish();
+    if (getBit(cpu.currentInstruction, 20)) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
 
 export function MUL(cpu: ARM7CPU): void {
 
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rd = getBits(cpu.currentInstruction, 19, 16);
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let rs = getBits(cpu.currentInstruction, 11, 8);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)));
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)));
 
-    if (cpu.instructionStage == 2) {
-        let result = (cpu.readRegister(rm) * cpu.readRegister(rs));
-        cpu.writeRegister(rd, result);
+    let result = (cpu.readRegister(rm) * cpu.readRegister(rs));
+    cpu.writeRegister(rd, result);
 
-        if (getBit(cpu.currentInstruction, 20)) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish();
+    if (getBit(cpu.currentInstruction, 20)) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
 
 export function UMLAL(cpu: ARM7CPU): void {
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rdHi = getBits(cpu.currentInstruction, 19, 16);
     let rdLo = getBits(cpu.currentInstruction, 15, 12);
@@ -94,31 +68,20 @@ export function UMLAL(cpu: ARM7CPU): void {
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let sBit = getBit(cpu.currentInstruction, 20);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)) + 2);
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)) + 2);
 
-    if (cpu.instructionStage == 2) {
-        let hiLo: u64 = u64((u64(rdHi) << 32) | (u64(rdLo)));
-        let result: u64 = (u64(cpu.readRegister(rm)) * u64(cpu.readRegister(rs))) + hiLo;
-        cpu.writeRegister(rdHi, u32(result >> 32));
-        cpu.writeRegister(rdLo, u32(result));
+    let hiLo: u64 = u64((u64(rdHi) << 32) | (u64(rdLo)));
+    let result: u64 = (u64(cpu.readRegister(rm)) * u64(cpu.readRegister(rs))) + hiLo;
+    cpu.writeRegister(rdHi, u32(result >> 32));
+    cpu.writeRegister(rdLo, u32(result));
 
-        if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish();
+    if (sBit) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
 
 export function SMLAL(cpu: ARM7CPU): void {
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rdHi = getBits(cpu.currentInstruction, 19, 16);
     let rdLo = getBits(cpu.currentInstruction, 15, 12);
@@ -126,31 +89,20 @@ export function SMLAL(cpu: ARM7CPU): void {
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let sBit = getBit(cpu.currentInstruction, 20);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)) + 2);
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)) + 2);
 
-    if (cpu.instructionStage == 2) {
-        let hiLo: i64 = i64((u64(rdHi) << 32) | (u64(rdLo)));
-        let result: i64 = (i64(cpu.readRegister(rm)) * i64(cpu.readRegister(rs))) + hiLo;
-        cpu.writeRegister(rdHi, u32(result >> 32));
-        cpu.writeRegister(rdLo, u32(result));
+    let hiLo: i64 = i64((u64(rdHi) << 32) | (u64(rdLo)));
+    let result: i64 = (i64(cpu.readRegister(rm)) * i64(cpu.readRegister(rs))) + hiLo;
+    cpu.writeRegister(rdHi, u32(result >> 32));
+    cpu.writeRegister(rdLo, u32(result));
 
-        if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish();
+    if (sBit) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
 
 export function SMLUL(cpu: ARM7CPU): void {
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rdHi = getBits(cpu.currentInstruction, 19, 16);
     let rdLo = getBits(cpu.currentInstruction, 15, 12);
@@ -158,30 +110,19 @@ export function SMLUL(cpu: ARM7CPU): void {
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let sBit = getBit(cpu.currentInstruction, 20);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)) + 1);
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)) + 1);
 
-    if (cpu.instructionStage == 2) {
-        let result: i64 = (i64(cpu.readRegister(rm)) * i64(cpu.readRegister(rs)));
-        cpu.writeRegister(rdHi, u32(result >> 32));
-        cpu.writeRegister(rdLo, u32(result));
+    let result: i64 = (i64(cpu.readRegister(rm)) * i64(cpu.readRegister(rs)));
+    cpu.writeRegister(rdHi, u32(result >> 32));
+    cpu.writeRegister(rdLo, u32(result));
 
-        if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish()
+    if (sBit) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
 
 export function UMULL(cpu: ARM7CPU): void {
-    if (cpu.instructionStage == 0) {
-        if (!testCondition(cpu)) { cpu.finish(); return; }
-        cpu.instructionStage = 1;
-    }
 
     let rdHi = getBits(cpu.currentInstruction, 19, 16);
     let rdLo = getBits(cpu.currentInstruction, 15, 12);
@@ -189,21 +130,14 @@ export function UMULL(cpu: ARM7CPU): void {
     let rm = getBits(cpu.currentInstruction, 3, 0);
     let sBit = getBit(cpu.currentInstruction, 20);
 
-    if (cpu.instructionStage == 1) {
-        cpu.addWaitStates(deduceMStates(cpu.readRegister(rs)) + 1);
-        cpu.instructionStage = 2;
-        return;
-    }
+    cpu.addCycles(deduceMStates(cpu.readRegister(rs)) + 1);
 
-    if (cpu.instructionStage == 2) {
-        let result: u64 = (u64(cpu.readRegister(rm)) * u64(cpu.readRegister(rs)));
-        cpu.writeRegister(rdHi, u32(result >> 32));
-        cpu.writeRegister(rdLo, u32(result));
+    let result: u64 = (u64(cpu.readRegister(rm)) * u64(cpu.readRegister(rs)));
+    cpu.writeRegister(rdHi, u32(result >> 32));
+    cpu.writeRegister(rdLo, u32(result));
 
-        if (sBit) {
-            cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-            cpu.setFlag(StatusFlags.ZERO, result == 0);
-        }
-        cpu.finish();
+    if (sBit) {
+        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
+        cpu.setFlag(StatusFlags.ZERO, result == 0);
     }
 }
