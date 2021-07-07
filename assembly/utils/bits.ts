@@ -2,12 +2,21 @@
 const MAX_32: u32 = 0xffffffff;
 
 export function setBit(data: u32, bitPos: u32, value: boolean): u32 {
-    let clearBit = ~(u32(1) << bitPos);
-    data &= clearBit;
+
+    let shiftedBits = data >>> bitPos;
+    let restorationBits = data << (32 - bitPos);
+    restorationBits = restorationBits >>> (32 - bitPos);
+
     if (value) {
-        data |= (~clearBit);
+        shiftedBits = shiftedBits | 0x1;
+    } else {
+        shiftedBits = shiftedBits >>> 1;
+        shiftedBits = shiftedBits << 1;
     }
-    return data;
+
+    shiftedBits = shiftedBits << bitPos;
+    shiftedBits = shiftedBits | restorationBits;
+    return shiftedBits;
 
 }
 
