@@ -1,5 +1,4 @@
 import * as cpu from "./cpu/cpu";
-import * as ops from './cpu/instructions/initialize';
 import InterruptManager from "./cpu/interrupt-manager";
 import GamePak from "./gamepak/gamepak";
 import { IOMap } from "./io/io-map";
@@ -28,7 +27,6 @@ export class GBA {
     private cycles: u32 = 0;
 
     constructor() {
-        ops.initARM();
         this.VRAM = new VRAM(this.videoRegisters);
         this.videoUnit = new VideoController(
             this.OAM,
@@ -47,7 +45,8 @@ export class GBA {
             this.videoUnit);
         this.cpu = new cpu.ARM7CPU(
             this.systemMemory,
-            this.interruptManager);
+            this.interruptManager,
+        );
     }
 
     run(): i32 {
@@ -69,17 +68,18 @@ export class GBA {
     }
 
     step(): void {
-        if (this.cpu.handlerQueued()) {
-            this.cpu.tick();
-        }
+        this.cpu.tick();
+    }
 
-        while (!this.cpu.handlerQueued()) {
-            this.cpu.tick();
-        }
+    updateDMAListeners(): void {
+
+    }
+
+    updateCPUListeners(): void {
+        this.cycles = 0;
     }
 
     getCPU(): cpu.ARM7CPU {
         return this.cpu;
-
     }
 }
