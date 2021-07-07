@@ -217,7 +217,7 @@ export function MOV(cpu: ARM7CPU): void {
 
     let shifterOutput = deduceAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
-    let sBit = getBit(cpu.instructionStage, 20);
+    let sBit = getBit(cpu.currentInstruction, 20);
 
     cpu.writeRegister(rd, shifterOutput.operand);
     if (!sBit) {
