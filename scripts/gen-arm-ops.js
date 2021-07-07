@@ -163,6 +163,16 @@ function test_DATA_REG_SHIFT(row, col, fullInstruction) {
 matchers.push(test_DATA_REG_SHIFT);
 
 
+function test_BRANCH_EXCHANGE(row, col, fullInstruction) {
+    if (!matchBitPattern("00010010", row) || !matchBitPattern("0001", col)) {
+        return false;
+    }
+
+    return ' arm.BX';
+}
+
+matchers.push(test_BRANCH_EXCHANGE);
+
 /** @type {MatcherFunc} */
 function testMultiply(row, col, fullInstruction) {
     if (!matchBitPattern("000000xx", row) || !matchBitPattern("1001", col)) {
@@ -454,16 +464,14 @@ function test_LD_STR_MULTIPLE(row, col, fullInstruction) {
 
     let lbit = getBit(fullInstruction, 20);
     let sBit = getBit(fullInstruction, 22);
-    if (lbit && sBit) {
-        return ' arm.LDM2';
-    }
-    else if (lbit) {
+
+    if (lbit && !sBit) {
         return ' arm.LDM';
-    }
-    else if (!lbit && sBit) {
+    } else if (lbit && sBit) {
+        return ' arm.LDM2';
+    } else if (!lbit && !sBit) {
         return ' arm.STM';
-    }
-    else if (!lbit) {
+    } else if (!lbit && sBit) {
         return ' arm.STM2';
     }
 }
