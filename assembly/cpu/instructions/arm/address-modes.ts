@@ -145,7 +145,7 @@ export function asr(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     }
 
     if (amount < 32) {
-        let result = bits >> <u32>amount;
+        let result = bits >> u32(amount);
         let carryOut = getBit(bits, amount - 1);
         let operand = result;
         let shifterOut = u32(carryOut);
@@ -174,8 +174,8 @@ export function lsr(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     }
 
     if (amount < 32) {
-        let shiftResult = bits >>> <u32>amount
-        let carryOut = getBit(bits, <u32>amount - 1);
+        let shiftResult = bits >>> u32(amount)
+        let carryOut = getBit(bits, u32(amount) - 1);
         operand = shiftResult;
         shifterOut = u32(carryOut);
         return { operand, shifterOut };
@@ -203,7 +203,7 @@ export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
 
     if (amount < 32) {
         let carryout = getBit(bits, u32(32 - amount));
-        operand = bits << <u32>amount;
+        operand = bits << u32(amount);
         shifterOut = u32(carryout);
         return { operand, shifterOut };
     }
@@ -223,11 +223,11 @@ export function rotateRight(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput
 
     if (amount == 0) {
         operand = result;
-        shifterOut = 0;
+        shifterOut = cpu.flagVal(StatusFlags.CARRY);
         return { operand, shifterOut };
     }
     operand = result;
-    shifterOut = u32(getBit(result, 32))
+    shifterOut = u32(getBit(result, 31))
     return { operand, shifterOut };
 }
 
