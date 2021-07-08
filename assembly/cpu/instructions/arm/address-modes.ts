@@ -145,7 +145,7 @@ export function asr(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     }
 
     if (amount < 32) {
-        let result = bits >> u32(amount);
+        let result = u32(<i32>bits >> <i32>amount);
         let carryOut = getBit(bits, amount - 1);
         let operand = result;
         let shifterOut = u32(carryOut);

@@ -184,7 +184,29 @@ export function CMP(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand));
-    cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, i32(shifterOutput.operand) * -1));
+    cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(i32(rnVal), i32(shifterOutput.operand)));
+}
+
+function subSignOverflow(lhs: i32, rhs: i32): boolean {
+    /**
+     *  If 2 Two's Complement numbers are subtracted, 
+     * and their signs are different, 
+     * then overflow occurs if and only if 
+     * the result has the same sign as the subtrahend.
+        Overflow occurs if
+        (+A) − (−B) = −C
+        (−A) − (+B) = +C
+     */
+    let result = lhs - rhs;
+    if ((lhs >= 0) && (rhs < 0) && (result < 0)) {
+        return true;
+    }
+
+    if ((lhs < 0) && (rhs >= 0) && (result >= 0)) {
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -377,7 +399,9 @@ export function RSB(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
-    let result = shifterOutput.operand - cpu.readRegister(rn);
+    let rnVal = cpu.readRegister(rn);
+    let result = shifterOutput.operand - rnVal;
+    cpu.writeRegister(rd, result);
 
     if (!sBit) {
         return;
@@ -388,8 +412,8 @@ export function RSB(cpu: ARM7CPU): void {
     } else {
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, cpu.readRegister(rn)))
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(shifterOutput.operand, i32(cpu.readRegister(rn)) * -1))
+        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal))
+        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, <i32>rnVal))
     }
 }
 
@@ -401,7 +425,9 @@ export function RSC(cpu: ARM7CPU): void {
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
     let notC = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
-    let result = shifterOutput.operand - (cpu.readRegister(rn) + notC);
+    let rnVal = cpu.readRegister(rn);
+    let result = shifterOutput.operand - (rnVal + notC);
+    cpu.writeRegister(rd, result);
 
     if (!sBit) {
         return;
@@ -412,8 +438,8 @@ export function RSC(cpu: ARM7CPU): void {
     } else {
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, cpu.readRegister(rn) + notC))
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(shifterOutput.operand, i32(cpu.readRegister(rn) + notC) * -1))
+        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal + notC))
+        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, i32(rnVal + notC)))
     }
 }
 
@@ -449,7 +475,9 @@ export function SBC(cpu: ARM7CPU): void {
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
     let notC = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
-    let result = cpu.readRegister(rn) - (shifterOutput.operand + notC);
+    let rnVal = cpu.readRegister(rn);
+    let result = rnVal - (shifterOutput.operand + notC);
+    cpu.writeRegister(rd, result);
 
     if (!sBit) {
         return;
@@ -461,7 +489,7 @@ export function SBC(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
         cpu.setFlag(StatusFlags.CARRY, !underflowFrom(cpu.readRegister(rn), shifterOutput.operand + notC))
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(cpu.readRegister(rn), i32(shifterOutput.operand + notC) * -1))
+        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>rnVal, i32(rnVal + notC)))
     }
 }
 

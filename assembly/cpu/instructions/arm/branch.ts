@@ -12,11 +12,8 @@ export function BBL(cpu: ARM7CPU): void {
     //Sign extend and shift to left by 2
     targetAddr = u32(<i32>targetAddr >> 6);
 
-    //  trace("Branch Instruction", 1, instruction);
-    // trace("Lbit", 1, lBit ? 1 : 0);
     if (lBit) {
         cpu.writeRegister(14, cpu.PC - 4);
-        //    trace("Branch Instruction", 1, instruction);
     }
     let addr: u32;
     if (getBit(targetAddr, 31)) {
@@ -31,7 +28,6 @@ export function BBL(cpu: ARM7CPU): void {
 
 
 export function BX(cpu: ARM7CPU): void {
-    trace("HELLO");
     let instruction = cpu.currentInstruction;
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
