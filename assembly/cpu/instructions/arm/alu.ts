@@ -7,7 +7,7 @@ import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, rori, rorr, rota
 
 
 function carryFrom(lhs: u32, rhs: u32): boolean {
-    return lhs > ((u32(0xffffffff)) - lhs);
+    return rhs > ((u32(0xffffffff)) - lhs);
 }
 
 function isNegative(val: u32): boolean {
@@ -75,7 +75,10 @@ export function ADDC(cpu: ARM7CPU): void {
     let carryOut = cpu.flagVal(StatusFlags.CARRY);
     let result = rnVal + shifterOut.operand + carryOut;
     cpu.writeRegister(rd, result);
-    if (sBit && rd == 15) {
+    if (!sBit) {
+        return;
+    }
+    if (rd == 15) {
         cpu.CPSR = cpu.SPSR;
     } else {
         cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
@@ -99,6 +102,7 @@ export function ADD(cpu: ARM7CPU): void {
     if (!sBit) {
         return;
     }
+
     if (rd == 15) {
         cpu.CPSR = cpu.SPSR;
     } else {
@@ -463,7 +467,7 @@ export function SUB(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, (result == 0));
         cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand))
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, i32(shifterOutput.operand) * -1))
+        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand))
     }
 }
 

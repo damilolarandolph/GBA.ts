@@ -53,7 +53,7 @@ export function lsri(cpu: ARM7CPU): ShifterOutput {
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
     let shiftAmount = u32(getBits(instruction, 11, 7));
-    return lsr(rmVal, shiftAmount, cpu);
+    return lsr(rmVal, shiftAmount, true, cpu);
 }
 
 
@@ -65,7 +65,7 @@ export function lsrr(cpu: ARM7CPU): ShifterOutput {
     let rmVal = cpu.readRegister(rm);
     let rs = getBits(instruction, 11, 8);
     let rsVal = cpu.readRegister(rs) & 0xff;
-    return lsr(rmVal, rsVal, cpu);
+    return lsr(rmVal, rsVal, false, cpu);
 }
 // Arithmetic shift right by immediate
 export function asri(cpu: ARM7CPU): ShifterOutput {
@@ -164,26 +164,42 @@ export function asr(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
 
 
 //Logical shift right
-export function lsr(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
+export function lsr(bits: u32, amount: u32, isImmediate: boolean, cpu: ARM7CPU): ShifterOutput {
     let operand: u32;
     let shifterOut: u32;
-    if (amount == 0) {
+
+
+    if (isImmediate) {
+        if (amount == 0) {
+            return { operand: 0, shifterOut: getBit(bits, 31) ? 1 : 0 };
+        } else {
+
+            return {
+                operand: bits >>> amount,
+                shifterOut: getBit(bits, amount - 1) ? 1 : 0
+            }
+
+        }
+    }
+
+    let amountTrunc = amount & 0xff;
+
+    if (amountTrunc == 0) {
         operand = bits;
         shifterOut = cpu.flagVal(StatusFlags.CARRY);
         return { operand, shifterOut };
     }
 
-    if (amount < 32) {
-        let shiftResult = bits >>> u32(amount)
-        let carryOut = getBit(bits, u32(amount) - 1);
+    if (amountTrunc < 32) {
+        let shiftResult = bits >>> amountTrunc
+        let carryOut = getBit(bits, u32(amountTrunc) - 1);
         operand = shiftResult;
-        shifterOut = u32(carryOut);
-        return { operand, shifterOut };
+        return { operand, shifterOut: carryOut ? 1 : 0 };
     }
 
-    if (amount == 32) {
+    if (amountTrunc == 32) {
         operand = 0;
-        shifterOut = u32(getBit(bits, 32));
+        shifterOut = u32(getBit(bits, 31));
         return { operand, shifterOut };
     }
     return { operand: 0, shifterOut: 0 }
@@ -195,22 +211,23 @@ export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     let operand: u32;
     let shifterOut: u32;
 
-    if (amount == 0) {
+    let amountTrunc = amount & 0xff;
+
+    if (amountTrunc == 0) {
         operand = bits;
         shifterOut = cpu.flagVal(StatusFlags.CARRY);
         return { operand, shifterOut };
     }
 
-    if (amount < 32) {
-        let carryout = getBit(bits, u32(32 - amount));
-        operand = bits << u32(amount);
-        shifterOut = u32(carryout);
-        return { operand, shifterOut };
+    if (amountTrunc < 32) {
+        let carryout = getBit(bits, u32(32 - amountTrunc));
+        operand = bits << u32(amountTrunc);
+        return { operand, shifterOut: carryout ? 1 : 0 };
     }
 
-    if (amount == 32) {
+    if (amountTrunc == 32) {
         operand = 0;
-        shifterOut = u32(getBit(bits, 0));
+        shifterOut = getBit(bits, 0) ? 1 : 0;
         return { operand, shifterOut };
     }
     return { operand: 0, shifterOut: 0 }
