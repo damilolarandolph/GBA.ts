@@ -1,15 +1,70 @@
-import MemoryAccessor from './memory-accessor';
 
-export default interface MemoryMap {
-    read32(address: u32, accessor: MemoryAccessor): u32;
+export abstract class MemoryMapImpl implements MemoryMap {
 
-    read16(address: u32, accessor: MemoryAccessor): u16;
+    protected data: Uint8Array;
+    protected addressOffset: u32;
 
-    read8(address: u32, accessor: MemoryAccessor): u8;
+    constructor(data: Uint8Array, addressOffset: u32) {
+        this.data = data;
+        this.addressOffset = addressOffset;
+    }
 
-    write8(address: u32, accessor: MemoryAccessor, value: u8): void
+    read32(address: u32): u32 {
+        address -= this.addressOffset;
+        let byte1: u32 = this.data[address];
+        let byte2: u32 = this.data[address + 1];
+        let byte3: u32 = this.data[address + 2];
+        let byte4: u32 = this.data[address + 3]
+        return (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | (byte4);
+    }
 
-    write16(address: u32, accessor: MemoryAccessor, value: u16): void
+    read16(address: u32): u16 {
+        address -= this.addressOffset;
+        let byte1: u16 = this.data[address];
+        let byte2: u16 = this.data[address + 2];
+        return (byte1 << 8) | byte2;
+    };
 
-    write32(address: u32, accessor: MemoryAccessor, value: u32): void
+    read8(address: u32): u8 {
+        address -= this.addressOffset;
+        return this.data[address];
+    };
+
+    write8(address: u32, value: u8): void {
+        address -= this.addressOffset;
+        this.data[address] = value;
+    }
+
+    write16(address: u32, value: u16): void {
+        this.data[address] = u8(value);
+        value = value >>> 8;
+        this.data[address + 1] = u8(value);
+    }
+
+    write32(address: u32, value: u32): void {
+        this.data[address] = u8(value);
+        value = value >>> 8;
+        this.data[address + 1] = u8(value);
+        value = value >>> 8;
+        this.data[address + 2] = u8(value);
+        value = value >>> 8;
+        this.data[address + 3] = u8(value);
+    }
 }
+
+
+export interface MemoryMap {
+    read32(address: u32): u32
+
+    read16(address: u32): u16
+
+    read8(address: u32): u8
+
+    write8(address: u32, value: u8): void
+
+    write16(address: u32, value: u16): void
+
+    write32(address: u32, value: u32): void
+}
+
+

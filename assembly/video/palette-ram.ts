@@ -1,51 +1,11 @@
-import MemoryAccessor from "../memory/memory-accessor";
-import MemoryMap from "../memory/memory-map";
+import { MemoryMapImpl } from "../memory/memory-map";
 
-export default class PaletteRam implements MemoryMap {
+export default class PaletteRam extends MemoryMapImpl {
     // 1K ?
-    private data: Uint8Array = new Uint8Array(1000);
-    private offset: u32 = 0x05000000;
 
-    read32(address: u32, accessor: MemoryAccessor): u32 {
-        address -= this.offset;
-        let byte1 = this.data[address];
-        let byte2 = this.data[address + 1];
-        let byte3 = this.data[address + 2];
-        let byte4 = this.data[address + 3];
-        let data = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
-        return data;
+    constructor() {
+        let data: Uint8Array = new Uint8Array(1024);
+        super(data, 0x05000000)
     }
 
-    read16(address: u32, accessor: MemoryAccessor): u16 {
-        address -= this.offset;
-        let byte1 = this.data[address];
-        let byte2 = this.data[address + 1];
-        let data = (byte2 << 8) | byte1;
-        return data;
-    }
-
-    read8(address: u32, accessor: MemoryAccessor): u8 {
-        return this.data[address];
-    }
-
-    write8(address: u32, accessor: MemoryAccessor, value: u8): void {
-        this.data[address] = value;
-    }
-
-    write16(address: u32, accessor: MemoryAccessor, value: u16): void {
-        address -= this.offset;
-        this.data[address] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 1] = value & 0xff;
-    }
-
-    write32(address: u32, accessor: MemoryAccessor, value: u32): void {
-        this.data[address] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 1] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 2] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 3] = value & 0xff;
-    }
 }

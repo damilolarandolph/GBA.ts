@@ -1,5 +1,4 @@
-import MemoryAccessor from "../memory/memory-accessor";
-import MemoryMap from "../memory/memory-map";
+import { MemoryMap } from "../memory/memory-map";
 import IODevice from "./io-device";
 
 export class IOMap implements MemoryMap {
@@ -16,27 +15,27 @@ export class IOMap implements MemoryMap {
         }
         return this.videoController;
     }
-    read32(address: u32, accessor: MemoryAccessor): u32 {
+    read32(address: u32,): u32 {
         return this.getDeviceForAddress(address).readIO(address);
     }
 
-    read16(address: u32, accessor: MemoryAccessor): u16 {
+    read16(address: u32,): u16 {
         return u16(this.getDeviceForAddress(address).readIO(address));
     }
 
-    read8(address: u32, accessor: MemoryAccessor): u8 {
+    read8(address: u32,): u8 {
         return u8(this.getDeviceForAddress(address).readIO(address));
     }
 
-    write8(address: u32, accessor: MemoryAccessor, value: u8): void {
+    write8(address: u32, value: u8): void {
         this.getDeviceForAddress(address).writeIO(address, value);
     }
 
-    write16(address: u32, accessor: MemoryAccessor, value: u16): void {
+    write16(address: u32, value: u16): void {
         this.getDeviceForAddress(address).writeIO(address, value);
     }
 
-    write32(address: u32, accessor: MemoryAccessor, value: u32): void {
+    write32(address: u32, value: u32): void {
         this.getDeviceForAddress(address).writeIO(address, value);
     }
 }

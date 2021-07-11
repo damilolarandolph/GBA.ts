@@ -1,7 +1,5 @@
 import InterruptManager from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
-import memoryAccessor from "../memory/memory-accessor";
-import MemoryMap from "../memory/memory-map";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
 import VRAM from "./vram";
@@ -32,11 +30,16 @@ class MapEntry {
     palNumber: u16;
 }
 
-export class VideoController implements IODevice, MemoryMap {
 
-    private OAM: OAM;
-    private VRAM: VRAM;
-    private paletteRAM: PaletteRam;
+const buffer1: Uint16Array = new Uint16Array(38400);
+const buffer2: Uint16Array = new Uint16Array(38400);
+
+
+export class VideoController implements IODevice {
+
+    public OAM: OAM;
+    public VRAM: VRAM;
+    public paletteRAM: PaletteRam;
     private registers: VideoUnitRegisters;
     private interruptManager: InterruptManager;
     private buffer1: Uint16Array = new Uint16Array(38400);
@@ -69,40 +72,21 @@ export class VideoController implements IODevice, MemoryMap {
     }
 
 
-    private mapForAddress(address: u32): MemoryMap {
-        if (address >= 0x05000000 && address <= 0x050003FF) {
-            return this.paletteRAM;
-        }
 
-        if (address >= 0x06000000 && address <= 0x06017FFF) {
-            return this.VRAM;
-        }
-
-        return this.OAM;
-    }
 
     tick(): void {
 
     }
 
-    read32(address: u32, accessor: memoryAccessor): u32 {
-        return this.mapForAddress(address).read32(address, accessor);
+    getBuffer(no: i32): Uint16Array {
+        if (no == 1) {
+            return this.buffer1;
+        } else {
+            return this.buffer2;
+        }
     }
-    read16(address: u32, accessor: memoryAccessor): u16 {
-        return this.mapForAddress(address).read16(address, accessor);
-    }
-    read8(address: u32, accessor: memoryAccessor): u8 {
-        return this.mapForAddress(address).read8(address, accessor);
-    }
-    write8(address: u32, accessor: memoryAccessor, value: u8): void {
-        this.mapForAddress(address).write8(address, accessor, value);
-    }
-    write16(address: u32, accessor: memoryAccessor, value: u16): void {
-        this.mapForAddress(address).write16(address, accessor, value);
-    }
-    write32(address: u32, accessor: memoryAccessor, value: u32): void {
-        this.mapForAddress(address).write32(address, accessor, value);
-    }
+
+
     writeIO(address: u32, value: u32): void {
         //
     }

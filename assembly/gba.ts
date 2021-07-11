@@ -1,6 +1,6 @@
 import * as cpu from "./cpu/cpu";
 import InterruptManager from "./cpu/interrupt-manager";
-import GamePak from "./gamepak/gamepak";
+import { GamePak, cartData } from "./gamepak/gamepak";
 import { IOMap } from "./io/io-map";
 import BIOS from "./memory/BIOS";
 import { SystemMemory } from "./memory/memory";
@@ -42,7 +42,10 @@ export class GBA {
             this.WRAM2,
             this.IOMap,
             this.gamePak,
-            this.videoUnit);
+            this.videoUnit.paletteRAM,
+            this.videoUnit.VRAM,
+            this.videoUnit.OAM
+        );
         this.cpu = new cpu.ARM7CPU(
             this.systemMemory,
             this.interruptManager,
@@ -65,6 +68,18 @@ export class GBA {
 
     bios(): BIOS {
         return this.BIOS;
+    }
+
+    getMem(): SystemMemory {
+        return this.systemMemory;
+    }
+
+    getGamePAK(): Uint8Array {
+        return cartData;
+    }
+
+    getVideo(): VideoController {
+        return this.videoUnit;
     }
 
     step(): void {
