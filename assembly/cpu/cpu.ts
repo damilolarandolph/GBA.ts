@@ -1,6 +1,5 @@
 import { GBA } from '../gba';
-import MemoryAccessor from '../memory/memory-accessor';
-import MemoryMap from '../memory/memory-map';
+import { SystemMemory } from '../memory/memory';
 import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
 import { armOpTable, opHandler } from './instructions/arm-op-table';
@@ -29,9 +28,9 @@ export enum StatusFlags {
 }
 
 
-export class ARM7CPU implements MemoryAccessor {
+export class ARM7CPU {
     private _opQueue: Queue<u32> = new Queue<u32>(10);
-    private _memoryMap: MemoryMap;
+    private _memoryMap: SystemMemory;
     private _currentOp: u32 = 0;
     private interuptManager: InterruptManager;
     private _cspr: u32;
@@ -39,10 +38,11 @@ export class ARM7CPU implements MemoryAccessor {
     private _currentMode: CPU_MODES = CPU_MODES.USR;
     private _bankedRegisters: Map<CPU_MODES, StaticArray<u32>> = new Map();
     private _SPSRs: Map<CPU_MODES, u32> = new Map();
+    public totalCycles: u64 = 0;
     private _currentCycles: u32 = 0;
 
 
-    constructor(memoryMap: MemoryMap, interruptManager: InterruptManager) {
+    constructor(memoryMap: SystemMemory, interruptManager: InterruptManager) {
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
         this._bankedRegisters.set(CPU_MODES.SVC, new StaticArray(2));
@@ -97,6 +97,7 @@ export class ARM7CPU implements MemoryAccessor {
         let op = this._opQueue.dequeue();
         this._currentOp = op;
         let handler = this.getOpHandler(this._currentOp);
+        ++this.totalCycles;
         if (testCondition(this)) {
             handler(this);
         }
@@ -245,27 +246,30 @@ export class ARM7CPU implements MemoryAccessor {
     }
 
     read32(address: u32): u32 {
-        return this._memoryMap.read32(address, this);
+        return this._memoryMap.read32(address);
     }
 
     read16(address: u32): u16 {
-        return this._memoryMap.read16(address, this);
+        return this._memoryMap.read16(address);
     }
 
     read8(address: u32): u8 {
-        return this._memoryMap.read8(address, this);
+        return this._memoryMap.read8(address);
     }
 
     write8(address: u32, value: u8): void {
-        this._memoryMap.write8(address, this, value);
+        this._memoryMap.write8(address, value);
     }
 
     write16(address: u32, value: u16): void {
-        this._memoryMap.write16(address, this, value)
+        if (address == <u32>234881040) {
+            trace('PC', 1, this.PC);
+        }
+        this._memoryMap.write16(address, value)
     }
 
     write32(address: u32, value: u32): void {
-        this._memoryMap.write32(address, this, value);
+        this._memoryMap.write32(address, value);
     }
 
 }

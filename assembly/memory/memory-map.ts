@@ -15,14 +15,16 @@ export abstract class MemoryMapImpl implements MemoryMap {
         let byte2: u32 = this.data[address + 1];
         let byte3: u32 = this.data[address + 2];
         let byte4: u32 = this.data[address + 3]
-        return (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | (byte4);
+        let data: u32 = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
+        return data;
     }
 
     read16(address: u32): u16 {
         address -= this.addressOffset;
         let byte1: u16 = this.data[address];
-        let byte2: u16 = this.data[address + 2];
-        return (byte1 << 8) | byte2;
+        let byte2: u16 = this.data[address + 1];
+        let data: u16 = (byte2 << 8) | byte1;
+        return data;
     };
 
     read8(address: u32): u8 {
@@ -36,19 +38,21 @@ export abstract class MemoryMapImpl implements MemoryMap {
     }
 
     write16(address: u32, value: u16): void {
-        this.data[address] = u8(value);
-        value = value >>> 8;
-        this.data[address + 1] = u8(value);
+        address -= this.addressOffset;
+        this.data[address] = value & 0xff;
+        value >>>= 8
+        this.data[address + 1] = value & 0xff;
     }
 
     write32(address: u32, value: u32): void {
-        this.data[address] = u8(value);
-        value = value >>> 8;
-        this.data[address + 1] = u8(value);
-        value = value >>> 8;
-        this.data[address + 2] = u8(value);
-        value = value >>> 8;
-        this.data[address + 3] = u8(value);
+        address -= this.addressOffset;
+        this.data[address] = value & 0xff;
+        value >>>= 8;
+        this.data[address + 1] = value & 0xff;
+        value >>>= 8;
+        this.data[address + 2] = value & 0xff;
+        value >>>= 8;
+        this.data[address + 3] = value & 0xff;
     }
 }
 

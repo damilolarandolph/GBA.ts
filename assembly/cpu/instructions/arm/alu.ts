@@ -24,9 +24,9 @@ function signOverflowFrom(lhs: u32, rhs: u32): boolean {
     let result = signedLhs + signedRhs;
 
     if (signedLhs < 0 && signedRhs < 0) {
-        return result >= 0;
+        return result > 0;
     } else if (signedLhs > 0 && signedRhs > 0) {
-        return result <= 0;
+        return result < 0;
     }
 
     return false;
@@ -83,9 +83,10 @@ export function ADDC(cpu: ARM7CPU): void {
     } else {
         cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOut.operand + carryOut));
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOut.operand + carryOut));
+        cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOut.operand + carryOut) || carryFrom(shifterOut.operand, carryOut));
+        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOut.operand + carryOut) || signOverflowFrom(shifterOut.operand, carryOut));
     }
+    heap.free(changetype<usize>(shifterOut));
 
 }
 
@@ -111,6 +112,8 @@ export function ADD(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOut.operand));
         cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOut.operand));
     }
+
+    heap.free(changetype<usize>(shifterOut));
 }
 
 
@@ -137,6 +140,8 @@ export function AND(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.ZERO, result == 0);
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0 ? false : true);
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 
@@ -161,6 +166,8 @@ export function BIC(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.ZERO, result == 0);
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0 ? false : true);
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 
@@ -174,6 +181,8 @@ export function CMN(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOutput.operand));
     cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOutput.operand));
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 
@@ -189,6 +198,8 @@ export function CMP(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand));
     cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(i32(rnVal), i32(shifterOutput.operand)));
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 function subSignOverflow(lhs: i32, rhs: i32): boolean {
@@ -234,6 +245,8 @@ export function EOR(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.ZERO, result == 0);
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 1 ? true : false);
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 
@@ -255,6 +268,8 @@ export function MOV(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.ZERO, shifterOutput.operand == 0);
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 
@@ -370,6 +385,8 @@ export function MVN(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
     }
 
+    heap.free(changetype<usize>(shifterOutput));
+
 }
 
 export function ORR(cpu: ARM7CPU): void {
@@ -380,8 +397,8 @@ export function ORR(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
-
-    let result = cpu.readRegister(rn) | shifterOutput.operand;
+    let rnVal = cpu.readRegister(rn);
+    let result = rnVal | shifterOutput.operand;
     cpu.writeRegister(rd, result);
 
     if (!sBit) {
@@ -391,10 +408,13 @@ export function ORR(cpu: ARM7CPU): void {
     if (rd == 15) {
         cpu.CPSR = cpu.SPSR;
     } else {
+
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
         cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function RSB(cpu: ARM7CPU): void {
@@ -419,6 +439,8 @@ export function RSB(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal))
         cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, <i32>rnVal))
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function RSC(cpu: ARM7CPU): void {
@@ -445,6 +467,8 @@ export function RSC(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal + notC))
         cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, i32(rnVal + notC)))
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function SUB(cpu: ARM7CPU): void {
@@ -469,6 +493,8 @@ export function SUB(cpu: ARM7CPU): void {
         cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand))
         cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand))
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function SBC(cpu: ARM7CPU): void {
@@ -480,7 +506,7 @@ export function SBC(cpu: ARM7CPU): void {
     let sBit = getBit(cpu.currentInstruction, 20);
     let notC = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
     let rnVal = cpu.readRegister(rn);
-    let result = rnVal - (shifterOutput.operand + notC);
+    let result = rnVal - shifterOutput.operand - notC;
     cpu.writeRegister(rd, result);
 
     if (!sBit) {
@@ -490,11 +516,20 @@ export function SBC(cpu: ARM7CPU): void {
     if (rd == 15) {
         cpu.CPSR = cpu.SPSR;
     } else {
+
         cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
         cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(cpu.readRegister(rn), shifterOutput.operand + notC))
-        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>rnVal, i32(rnVal + notC)))
+        let tempRes = rnVal - shifterOutput.operand;
+        let underFlow = underflowFrom(rnVal, shifterOutput.operand) ||
+            underflowFrom(tempRes, notC);
+        cpu.setFlag(StatusFlags.CARRY, !underFlow);
+        cpu.setFlag(StatusFlags.OVERFLOW,
+            subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand)
+            || subSignOverflow(<i32>tempRes, <i32>notC)
+        )
     }
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function TEQ(cpu: ARM7CPU): void {
@@ -506,6 +541,8 @@ export function TEQ(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 export function TST(cpu: ARM7CPU): void {
@@ -517,6 +554,8 @@ export function TST(cpu: ARM7CPU): void {
     cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+
+    heap.free(changetype<usize>(shifterOutput));
 }
 
 

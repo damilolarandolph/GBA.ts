@@ -100,6 +100,7 @@ export function LDM(cpu: ARM7CPU): void {
         currentAddress += 4;
     }
     assert(multiAddrOutput.endAddress == currentAddress - 4);
+    heap.free(changetype<usize>(multiAddrOutput));
 }
 export function STM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
@@ -115,6 +116,7 @@ export function STM(cpu: ARM7CPU): void {
     }
 
     assert(multiAddrOutput.endAddress == currentAddress - 4);
+    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function LDM2(cpu: ARM7CPU): void {
@@ -134,6 +136,7 @@ export function LDM2(cpu: ARM7CPU): void {
     }
 
     assert(multiAddrOutput.endAddress == currentAddress - 4);
+    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function STM2(cpu: ARM7CPU): void {
@@ -150,6 +153,7 @@ export function STM2(cpu: ARM7CPU): void {
     }
 
     assert((currentAddress - 4) == multiAddrOutput.endAddress, "STM Addressing fail");
+    heap.free(changetype<usize>(multiAddrOutput));
 }
 export function LDM3(cpu: ARM7CPU): void {
 
@@ -171,6 +175,7 @@ export function LDM3(cpu: ARM7CPU): void {
     } else {
         cpu.PC = pcVal & 0xFFFFFFFC;
     }
+    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function LDR(cpu: ARM7CPU): void {
@@ -192,7 +197,11 @@ export function LDR(cpu: ARM7CPU): void {
 export function STR(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
-    cpu.write32(addr, cpu.readRegister(rd));
+    let rdValue = cpu.readRegister(rd);
+    if (addr >= 0x02000000 && addr <= 0x0203FFFF) {
+        trace("WRAM WRITE", 2, addr, rdValue);
+    }
+    cpu.write32(addr, rdValue);
 }
 
 export function STRT(cpu: ARM7CPU): void {
@@ -253,7 +262,10 @@ export function LDRH(cpu: ARM7CPU): void {
 export function STRH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
-    cpu.write16(addr, u16(cpu.readRegister(rd) & 0xffff));
+    let rdVal: u16 = u16(cpu.readRegister(rd) & 0xffff);
+    // trace("STRHVAL", 1, rdVal);
+    //trace("STRHVAL ADDR", 1, addr);
+    cpu.write16(addr, rdVal);
 }
 
 export function LDRSB(cpu: ARM7CPU): void {
@@ -273,10 +285,13 @@ export function LDRSH(cpu: ARM7CPU): void {
     let ldrbVal: u32 = cpu.read16(addr);
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
+    // trace("LDRBVAL", 1, ldrbVal);
+    //  trace("LDRBVAL ADDR", 1, addr);
 
     // Sign Extend
     ldrbVal <<= 16;
     ldrbVal = u32(<i32>ldrbVal >> 16);
+    //trace("LDRBVAL2", 1, ldrbVal);
     cpu.writeRegister(rd, ldrbVal);
 }
 

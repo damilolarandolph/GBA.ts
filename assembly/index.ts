@@ -1,18 +1,12 @@
 
-import { cartData } from "./gamepak/gamepak";
-import GBA from "./gba";
-
-var gba: GBA = new GBA();
+import { GBA } from "./gba";
 
 
+export var gba: GBA = new GBA();
+export { GBA };
 
-export function getCartData(): Uint8Array {
-
-  return cartData;
-}
-
-export function run(): void {
-  gba.run();
+export namespace console {
+  export declare function log(msg: string): void;
 }
 
 export function getGBA(): GBA {
