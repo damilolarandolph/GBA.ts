@@ -100,7 +100,6 @@ export function LDM(cpu: ARM7CPU): void {
         currentAddress += 4;
     }
     assert(multiAddrOutput.endAddress == currentAddress - 4);
-    heap.free(changetype<usize>(multiAddrOutput));
 }
 export function STM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
@@ -116,7 +115,6 @@ export function STM(cpu: ARM7CPU): void {
     }
 
     assert(multiAddrOutput.endAddress == currentAddress - 4);
-    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function LDM2(cpu: ARM7CPU): void {
@@ -136,7 +134,6 @@ export function LDM2(cpu: ARM7CPU): void {
     }
 
     assert(multiAddrOutput.endAddress == currentAddress - 4);
-    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function STM2(cpu: ARM7CPU): void {
@@ -153,7 +150,6 @@ export function STM2(cpu: ARM7CPU): void {
     }
 
     assert((currentAddress - 4) == multiAddrOutput.endAddress, "STM Addressing fail");
-    heap.free(changetype<usize>(multiAddrOutput));
 }
 export function LDM3(cpu: ARM7CPU): void {
 
@@ -175,7 +171,6 @@ export function LDM3(cpu: ARM7CPU): void {
     } else {
         cpu.PC = pcVal & 0xFFFFFFFC;
     }
-    heap.free(changetype<usize>(multiAddrOutput));
 }
 
 export function LDR(cpu: ARM7CPU): void {
