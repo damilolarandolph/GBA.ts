@@ -13,12 +13,28 @@ enum BGModes {
     MODE_4,
     MODE_5
 }
+enum IORegions {
+    DISPCNT = 0x4000000,
+    DISPSTAT = 0x4000004,
+    VCOUNT = 0x4000006,
+    BGCNT = 0x4000008,
+    BGHOVOFS = 0x4000010,
+    BG2X_LH = 0x4000028,
+    BG2P = 0x4000020,
+    BG3P = 0x400003,
+}
 
 enum BGLayers {
     BG_0,
     BG_1,
     BG_2,
     BG_3,
+    OBJ,
+}
+
+enum WindowLayers {
+    WINDOW_0,
+    WINDOW_1,
 }
 
 
@@ -42,8 +58,8 @@ export class VideoController implements IODevice {
     public paletteRAM: PaletteRam;
     private registers: VideoUnitRegisters;
     private interruptManager: InterruptManager;
-    private buffer1: Uint16Array = new Uint16Array(38400);
-    private buffer2: Uint16Array = new Uint16Array(38400);
+    private writeBuffer: Uint16Array = new Uint16Array(38400);
+    private readBuffer: Uint16Array = new Uint16Array(38400);
     private workingBuffer: number = 1;
 
 
@@ -59,6 +75,12 @@ export class VideoController implements IODevice {
         this.paletteRAM = paletteRAM;
         this.interruptManager = interruptManager;
     }
+    writeIO(address: u32, value: u32): void {
+        throw new Error("Method not implemented.");
+    }
+    readIO(address: u32): u32 {
+        throw new Error("Method not implemented.");
+    }
 
 
     get mapEntry(): MapEntry {
@@ -72,56 +94,226 @@ export class VideoController implements IODevice {
     }
 
 
+    drawLine(): void {
+
+    }
+
+    private drawMode0Line(): void {
+
+    }
+
+    private drawMode1Line(): void {
+
+    }
+
+    private drawMode2Line(): void {
+
+    }
+
+
+    private drawMode3Line(): void {
+
+    }
+
+    private drawMode4Line(): void {
+
+
+
+    }
+
+    private drawMode5Line(): void {
+
+    }
 
 
     tick(): void {
 
     }
 
-    getBuffer(no: i32): Uint16Array {
-        if (no == 1) {
-            return this.buffer1;
-        } else {
-            return this.buffer2;
-        }
-    }
 
-
-    writeIO(address: u32, value: u32): void {
-        //
-    }
-    readIO(address: u32): u32 {
-        return 1;
-    }
 
 }
 
 export class VideoUnitRegisters {
 
-    set DISPCNT(value: u16) { }
-    get DISPCNT(): u16 {
-        return 1;
+    private backingArray: StaticArray<u8> = new StaticArray<u8>(86);
+    public arrayPointer: usize;
+    public displayControl: DISPCNT;
+    public dispStatus: DISPSTAT;
+
+    constructor() {
+        this.arrayPointer = changetype<usize>(this.backingArray);
+        this.displayControl = new DISPCNT(this.arrayPointer);
+        this.dispStatus = new DISPSTAT(this.arrayPointer + 0x4);
     }
 
-    get mode(): BGModes { return 1 };
 
 
-    set DISPSTAT(value: u16) { }
-    get DISPSTAT(): u16 {
-        return 1;
+
+
+}
+
+class DISPCNT {
+    private dataPtr: usize;
+
+    constructor(pointer: usize) {
+        this.dataPtr = pointer;
     }
 
-    get VCOUNT(): u16 {
-        return 1;
+    get mode(): BGModes {
+        return load<u8>(this.dataPtr) & 0x7;
     }
 
-    setBGCNT(layer: BGLayers, value: u16): void { }
-    getBGCNT(layer: BGLayers): u16 { return 1; }
+    get frameSelect(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x10) != 0;
+    }
 
-    setBGHOFS(layer: BGLayers, value: u16): void { }
-    getBGHOFS(layer: BGLayers): u16 { return 1; }
+    get HblankInterval(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x20) != 0;
+    }
 
-    setBGVOFS(layer: BGLayers, value: u16): void { }
-    getBGVOFS(layer: BGLayers): u16 { return 1; }
+    get isOBJ2D(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x40) != 0;
+    }
+
+    get forcedBlank(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x80) != 0;
+    }
+
+    isDisplay(layer: BGLayers): boolean {
+        let data = load<u8>(this.dataPtr + 1);
+        let mask = 0x1;
+        mask <<= layer;
+        return (data & mask) != 0
+    }
+
+    isWindow(window: WindowLayers): boolean {
+        let data = load<u8>(this.dataPtr + 1);
+        let mask = 0x10;
+        mask <<= window;
+        return (data & mask) != 0
+    }
+
+    get isOBJWindow(): boolean {
+        let data = load<u8>(this.dataPtr + 1);
+        return (data & 0x80) != 0;
+    }
+}
+
+class DISPSTAT {
+    private dataPtr: usize;
+
+    constructor(pointer: usize) {
+        this.dataPtr = pointer;
+    }
+
+
+    get vBlank(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x1) != 0;
+    }
+
+    set vBlank(val: boolean) {
+        let data = load<u8>(this.dataPtr);
+        data >>>= 1;
+        data <<= 1;
+        if (val) {
+            data |= 0x1;
+        }
+        store<u8>(this.dataPtr, data);
+    }
+
+    get hBlank(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x2) != 0;
+    }
+
+    set hBlank(val: boolean) {
+        let data = load<u8>(this.dataPtr);
+        if (val) {
+            data |= 0x2;
+        } else {
+            // 1111101 (0x7D)
+            data &= 0xFD;
+        }
+        store<u8>(this.dataPtr, data);
+    }
+
+    get vCountFlag(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x4) != 0;
+    }
+
+    set vCountFlag(val: boolean) {
+        let data = load<u8>(this.dataPtr);
+        if (val) {
+            data |= 0x4
+        } else {
+            data &= 0xFB;
+        }
+        store<u8>(this.dataPtr, data);
+    }
+
+    get vBlankIRQ(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x8) != 0;
+    }
+
+    get hBlankIRQ(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x10) != 0;
+    }
+
+    get vCountIRQ(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x20) != 0;
+    }
+
+    get LY(): u8 {
+        let data = load<u8>(this.dataPtr + 1);
+        return data;
+    }
+
+    set LY(val: u8) {
+        store<u8>(this.dataPtr + 1, val);
+    }
+}
+
+
+class BGControl {
+    private dataPtr: usize;
+
+    constructor(pointer: usize) {
+        this.dataPtr = pointer;
+    }
+
+    get priority(): u8 {
+        let data = load<u8>(this.dataPtr);
+        return u8(data & 0x3)
+    }
+
+    get charBaseBlock(): u8 {
+        let data = load<u8>(this.dataPtr);
+        data >>= 2;
+        return u8(data & 0x3);
+    }
+
+    get mosaic(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x40) != 0;
+    }
+
+    get is16Palette(): boolean {
+        let data = load<u8>(this.dataPtr);
+        return (data & 0x80) != 0;
+    }
+
+    get screenBaseBlock(): u8 {
+
+    }
 
 }
