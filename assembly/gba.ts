@@ -7,7 +7,8 @@ import { SystemMemory } from "./memory/memory";
 import { WRAM1, WRAM2 } from "./memory/WRAM";
 import { OAM } from "./video/oam";
 import PaletteRam from "./video/palette-ram";
-import { VideoController, VideoUnitRegisters } from "./video/video-controller";
+import { VideoController } from "./video/video-controller";
+import { VideoUnitRegisters } from "./video/VideoUnitRegisters";
 export { cartData } from './gamepak/gamepak';
 import VRAM from "./video/vram";
 export class GBA {

@@ -1,5 +1,6 @@
+import { isHalfwordDataTransferImmediateOff } from "../cpu/instructions/arm/arm";
 import { MemoryMapImpl } from "../memory/memory-map";
-import { VideoUnitRegisters } from './video-controller';
+import { VideoUnitRegisters } from "./VideoUnitRegisters";
 
 export default class VRAM extends MemoryMapImpl {
     private registers: VideoUnitRegisters;
@@ -9,5 +10,10 @@ export default class VRAM extends MemoryMapImpl {
         super(data, 0x06000000);
         this.registers = regs
     };
+
+
+    get buffer(): Uint8Array {
+        return this.data;
+    }
 
 }

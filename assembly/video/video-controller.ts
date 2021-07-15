@@ -2,10 +2,11 @@ import InterruptManager from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
+import { VideoUnitRegisters } from "./VideoUnitRegisters";
 import VRAM from "./vram";
 
 
-enum BGModes {
+export enum BGModes {
     MODE_0,
     MODE_1,
     MODE_2,
@@ -24,7 +25,7 @@ enum IORegions {
     BG3P = 0x400003,
 }
 
-enum BGLayers {
+export enum BGLayers {
     BG_0,
     BG_1,
     BG_2,
@@ -32,7 +33,7 @@ enum BGLayers {
     OBJ,
 }
 
-enum WindowLayers {
+export enum WindowLayers {
     WINDOW_0,
     WINDOW_1,
 }
@@ -75,26 +76,40 @@ export class VideoController implements IODevice {
         this.paletteRAM = paletteRAM;
         this.interruptManager = interruptManager;
     }
-    writeIO(address: u32, value: u32): void {
-        throw new Error("Method not implemented.");
+    writeIO(address: u32, value: u8): void {
+        address &= 0x3FFFFFF;
+        let pointer = this.registers.arrayPointer + address;
+        store<u8>(pointer, value);
     }
-    readIO(address: u32): u32 {
-        throw new Error("Method not implemented.");
+    readIO(address: u32): u8 {
+        address &= 0x3FFFFFF;
+        let pointer = this.registers.arrayPointer + address;
+        return load<u8>(pointer);
     }
-
-
-    get mapEntry(): MapEntry {
-        return new MapEntry();
-    }
-
-
-
-    get bitmapPixel(): u16 {
-        return 1;
-    }
-
 
     drawLine(): void {
+
+        switch (this.registers.displayControl.mode) {
+            case BGModes.MODE_0:
+                this.drawMode0Line();
+                break;
+            case BGModes.MODE_1:
+                this.drawMode1Line();
+                break;
+            case BGModes.MODE_2:
+                this.drawMode2Line();
+                break;
+            case BGModes.MODE_3:
+                this.drawMode3Line();
+                break;
+            case BGModes.MODE_4:
+                this.drawMode4Line();
+                break;
+            case BGModes.MODE_5:
+                this.drawMode5Line();
+                break;
+
+        }
 
     }
 
@@ -132,188 +147,7 @@ export class VideoController implements IODevice {
 
 
 
-}
-
-export class VideoUnitRegisters {
-
-    private backingArray: StaticArray<u8> = new StaticArray<u8>(86);
-    public arrayPointer: usize;
-    public displayControl: DISPCNT;
-    public dispStatus: DISPSTAT;
-
-    constructor() {
-        this.arrayPointer = changetype<usize>(this.backingArray);
-        this.displayControl = new DISPCNT(this.arrayPointer);
-        this.dispStatus = new DISPSTAT(this.arrayPointer + 0x4);
-    }
-
-
-
-
 
 }
 
-class DISPCNT {
-    private dataPtr: usize;
 
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
-    }
-
-    get mode(): BGModes {
-        return load<u8>(this.dataPtr) & 0x7;
-    }
-
-    get frameSelect(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x10) != 0;
-    }
-
-    get HblankInterval(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x20) != 0;
-    }
-
-    get isOBJ2D(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x40) != 0;
-    }
-
-    get forcedBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x80) != 0;
-    }
-
-    isDisplay(layer: BGLayers): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        let mask = 0x1;
-        mask <<= layer;
-        return (data & mask) != 0
-    }
-
-    isWindow(window: WindowLayers): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        let mask = 0x10;
-        mask <<= window;
-        return (data & mask) != 0
-    }
-
-    get isOBJWindow(): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        return (data & 0x80) != 0;
-    }
-}
-
-class DISPSTAT {
-    private dataPtr: usize;
-
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
-    }
-
-
-    get vBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x1) != 0;
-    }
-
-    set vBlank(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        data >>>= 1;
-        data <<= 1;
-        if (val) {
-            data |= 0x1;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get hBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x2) != 0;
-    }
-
-    set hBlank(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        if (val) {
-            data |= 0x2;
-        } else {
-            // 1111101 (0x7D)
-            data &= 0xFD;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get vCountFlag(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x4) != 0;
-    }
-
-    set vCountFlag(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        if (val) {
-            data |= 0x4
-        } else {
-            data &= 0xFB;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get vBlankIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x8) != 0;
-    }
-
-    get hBlankIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x10) != 0;
-    }
-
-    get vCountIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x20) != 0;
-    }
-
-    get LY(): u8 {
-        let data = load<u8>(this.dataPtr + 1);
-        return data;
-    }
-
-    set LY(val: u8) {
-        store<u8>(this.dataPtr + 1, val);
-    }
-}
-
-
-class BGControl {
-    private dataPtr: usize;
-
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
-    }
-
-    get priority(): u8 {
-        let data = load<u8>(this.dataPtr);
-        return u8(data & 0x3)
-    }
-
-    get charBaseBlock(): u8 {
-        let data = load<u8>(this.dataPtr);
-        data >>= 2;
-        return u8(data & 0x3);
-    }
-
-    get mosaic(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x40) != 0;
-    }
-
-    get is16Palette(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x80) != 0;
-    }
-
-    get screenBaseBlock(): u8 {
-
-    }
-
-}
