@@ -1,5 +1,4 @@
 import IODevice from "../io/io-device";
-import MemoryMap from "../memory/memory-map";
 import { getBit, setBit } from "../utils/bits";
 import { ARM7CPU, CPU_MODES } from "./cpu";
 
@@ -67,10 +66,10 @@ export default class InterruptManager implements IODevice {
     }
 
 
-    writeIO(address: u32, value: u32): void {
+    writeIO(address: u32, value: u8): void {
         throw new Error("Method not implemented.");
     }
-    readIO(address: u32): u32 {
+    readIO(address: u32): u8 {
         throw new Error("Method not implemented.");
     }
 
