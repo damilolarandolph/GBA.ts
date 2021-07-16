@@ -285,14 +285,13 @@ export class BGRegs {
 
 
 @unmanaged
-export class WindowDimension {
+export class Dimension {
     rightX: u8 = 0;
     leftX: u8 = 0;
     topY: u8 = 0;
     bottomY: u8 = 0;
 };
 
-var dimension: WindowDimension = { rightX: 0, leftX: 0, topY: 0, bottomY: 0 };
 
 class WindowRegs {
     private dataPtr: usize;
@@ -301,7 +300,7 @@ class WindowRegs {
         this.dataPtr = pointer;
     }
 
-    getDimensions(window: WindowLayers): usize {
+    getDimensions(window: WindowLayers): Dimension {
         let pointer: usize = this.dataPtr;
         if (window == WindowLayers.WINDOW_1) {
             pointer += 2;
@@ -310,12 +309,12 @@ class WindowRegs {
         pointer += 4;
         let vertical = load<u16>(pointer);
 
-        dimension.rightX = u8(horizontal & 0xff) + 1;
-        dimension.leftX = u8((horizontal >>> 8) & 0xff);
-        dimension.bottomY = u8(vertical & 0xff) + 1;
-        dimension.topY = u8((vertical >>> 8) & 0xff);
+        let rightX = u8(horizontal & 0xff) + 1;
+        let leftX = u8((horizontal >>> 8) & 0xff);
+        let bottomY = u8(vertical & 0xff) + 1;
+        let topY = u8((vertical >>> 8) & 0xff);
 
-        return changetype<usize>(dimension);
+        return { rightX, leftX, bottomY, topY };
     }
 
 

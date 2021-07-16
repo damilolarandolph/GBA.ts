@@ -1,5 +1,6 @@
 import InterruptManager from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
+import { CompositionMixer } from "./CompositionMixer";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
 import { VideoUnitRegisters } from "./VideoUnitRegisters";
@@ -36,6 +37,8 @@ export enum BGLayers {
 export enum WindowLayers {
     WINDOW_0,
     WINDOW_1,
+    OBJ_WINDOW,
+    OUTSIDE_WINDOW
 }
 
 
@@ -52,6 +55,8 @@ const buffer1: Uint16Array = new Uint16Array(38400);
 const buffer2: Uint16Array = new Uint16Array(38400);
 
 
+
+
 export class VideoController implements IODevice {
 
     public OAM: OAM;
@@ -62,6 +67,11 @@ export class VideoController implements IODevice {
     private writeBuffer: Uint16Array = new Uint16Array(38400);
     private readBuffer: Uint16Array = new Uint16Array(38400);
     private workingBuffer: number = 1;
+    private composition: CompositionMixer = new CompositionMixer(
+
+    );
+    private currentDot: u32 = 0;
+
 
 
     constructor(oam: OAM,
@@ -88,6 +98,7 @@ export class VideoController implements IODevice {
     }
 
     drawLine(): void {
+        this.composition.flushLines();
 
         switch (this.registers.displayControl.mode) {
             case BGModes.MODE_0:
@@ -103,7 +114,7 @@ export class VideoController implements IODevice {
                 this.drawMode3Line();
                 break;
             case BGModes.MODE_4:
-                this.drawMode4Line();
+                this.drawMode4Line(BGLayers.BG_2, changetype<usize>(this.composition.BG2));
                 break;
             case BGModes.MODE_5:
                 this.drawMode5Line();
@@ -130,13 +141,29 @@ export class VideoController implements IODevice {
 
     }
 
-    private drawMode4Line(): void {
 
+    private drawMode4Line(layer: BGLayers, buf: usize): void {
+        let reg = unchecked(this.registers.bgControl[layer])
+        let vramPointer = changetype<usize>(this.VRAM.buffer);
+        let palettePointer = changetype<usize>(this.paletteRAM.buffer);
+        let currentLine = this.registers.dispStatus.LY;
+        // Move pointer to current line
+        vramPointer += (currentLine * 240)
 
+        for (let index = 0; index < 240; ++index) {
+            let colour = load<u8>(index + vramPointer);
+            let palette = this.paletteRAM.getColour(colour);
+            store<u16>(buf, palette);
+        }
+
+    }
+    private drawMode5Line(): void {
 
     }
 
-    private drawMode5Line(): void {
+
+
+    private drawOBJLine(): void {
 
     }
 
