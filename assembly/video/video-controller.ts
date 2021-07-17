@@ -1,8 +1,10 @@
 import InterruptManager from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
+import { Scheduler } from "../scheduler";
 import { CompositionMixer } from "./CompositionMixer";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
+import { VideoEvent, VideoEvents } from "./video-events";
 import { VideoUnitRegisters } from "./VideoUnitRegisters";
 import VRAM from "./vram";
 
@@ -42,6 +44,8 @@ export enum WindowLayers {
 }
 
 
+
+
 @unmanaged
 class MapEntry {
     tileNumber: u32;
@@ -56,7 +60,6 @@ const buffer2: Uint16Array = new Uint16Array(38400);
 
 
 
-
 export class VideoController implements IODevice {
 
     public OAM: OAM;
@@ -67,10 +70,9 @@ export class VideoController implements IODevice {
     private writeBuffer: Uint16Array = new Uint16Array(38400);
     private readBuffer: Uint16Array = new Uint16Array(38400);
     private workingBuffer: number = 1;
-    private composition: CompositionMixer = new CompositionMixer(
-
-    );
+    private composition: CompositionMixer = new CompositionMixer();
     private currentDot: u32 = 0;
+    private scheduler: Scheduler;
 
 
 
@@ -78,13 +80,17 @@ export class VideoController implements IODevice {
         vram: VRAM,
         paletteRAM: PaletteRam,
         interruptManager: InterruptManager,
-        videoRegs: VideoUnitRegisters
+        videoRegs: VideoUnitRegisters,
+        scheduler: Scheduler
     ) {
         this.OAM = oam;
         this.registers = videoRegs;
         this.VRAM = vram;
         this.paletteRAM = paletteRAM;
         this.interruptManager = interruptManager;
+        this.scheduler = scheduler;
+        VideoEvents.HBLANK = new VideoEvent(this, VideoEvents.HBLANK_HANDLER);
+        this.scheduler.schedule(VideoEvents.HBLANK, 960);
     }
     writeIO(address: u32, value: u8): void {
         address &= 0x3FFFFFF;
@@ -98,7 +104,6 @@ export class VideoController implements IODevice {
     }
 
     drawLine(): void {
-        this.composition.flushLines();
 
         switch (this.registers.displayControl.mode) {
             case BGModes.MODE_0:
@@ -121,6 +126,8 @@ export class VideoController implements IODevice {
                 break;
 
         }
+
+        ++this.registers.dispStatus.LY;
 
     }
 
@@ -151,7 +158,7 @@ export class VideoController implements IODevice {
         vramPointer += (currentLine * 240)
 
         for (let index = 0; index < 240; ++index) {
-            let colour = load<u8>(index + vramPointer);
+            let colour = load<u8>(index + <i32>vramPointer);
             let palette = this.paletteRAM.getColour(colour);
             store<u16>(buf, palette);
         }
@@ -160,6 +167,24 @@ export class VideoController implements IODevice {
     private drawMode5Line(): void {
 
     }
+
+    public hblank(s: Scheduler, tardiness: u64): void {
+        this.drawLine();
+        this.scheduler.schedule(VideoEvents.HBLANK_END, 272 - tardiness);
+    }
+
+    public hblankEnd(s: Scheduler, tardiness: u64): void {
+        this.scheduler.schedule(VideoEvents.HBLANK, 960 - tardiness);
+    }
+
+    public vblankEnd(s: Scheduler, tardiness: u64): void {
+        //do some stuff
+    }
+
+    getReadBuffer(): Uint16Array {
+        return this.readBuffer;
+    }
+
 
 
 
