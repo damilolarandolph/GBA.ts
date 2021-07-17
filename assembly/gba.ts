@@ -5,6 +5,7 @@ import { IOMap } from "./io/io-map";
 import BIOS from "./memory/BIOS";
 import { SystemMemory } from "./memory/memory";
 import { WRAM1, WRAM2 } from "./memory/WRAM";
+import { Scheduler } from "./scheduler";
 import { OAM } from "./video/oam";
 import PaletteRam from "./video/palette-ram";
 import { VideoController } from "./video/video-controller";
@@ -25,7 +26,7 @@ export class GBA {
     private PaletteRam: PaletteRam = new PaletteRam();
     private BIOS: BIOS = new BIOS();
     private interruptManager: InterruptManager = new InterruptManager();
-    private cycles: u32 = 0;
+    private scheduler: Scheduler = new Scheduler();
 
     constructor() {
         this.VRAM = new VRAM(this.videoRegisters);
@@ -34,7 +35,8 @@ export class GBA {
             this.VRAM,
             this.PaletteRam,
             this.interruptManager,
-            this.videoRegisters
+            this.videoRegisters,
+            this.scheduler
         );
         this.IOMap = new IOMap(this.videoUnit);
         this.systemMemory = new SystemMemory(
@@ -50,20 +52,18 @@ export class GBA {
         this.cpu = new cpu.ARM7CPU(
             this.systemMemory,
             this.interruptManager,
+            this.scheduler
         );
     }
 
-    run(): i32 {
-        //startFrame();
+    run(): void {
         while (true) {
-            // if (this.cycles >= 280000) {
-            //     this.cycles = 0;
-            //     //       startFrame();
-            // }
-            this.cpu.tick();
-            ++this.cycles
+            if (this.scheduler.canProcess) {
+                this.scheduler.processEvents();
+            } else {
+                this.cpu.tick();
+            }
         }
-        return 0;
     }
 
 
@@ -87,13 +87,6 @@ export class GBA {
         this.cpu.tick();
     }
 
-    updateDMAListeners(): void {
-
-    }
-
-    updateCPUListeners(): void {
-        this.cycles = 0;
-    }
 
     getCPU(): cpu.ARM7CPU {
         return this.cpu;

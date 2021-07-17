@@ -1,5 +1,6 @@
 import { GBA } from '../gba';
 import { SystemMemory } from '../memory/memory';
+import { Scheduler } from '../scheduler';
 import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
 import { armOpTable, opHandler } from './instructions/arm-op-table';
@@ -39,10 +40,15 @@ export class ARM7CPU {
     private _bankedRegisters: Map<CPU_MODES, StaticArray<u32>> = new Map();
     private _SPSRs: Map<CPU_MODES, u32> = new Map();
     public totalCycles: u64 = 0;
-    private _currentCycles: u32 = 0;
+    private scheduler: Scheduler;
 
 
-    constructor(memoryMap: SystemMemory, interruptManager: InterruptManager) {
+    constructor(
+        memoryMap: SystemMemory,
+        interruptManager: InterruptManager,
+        scheduler: Scheduler
+    ) {
+        this.scheduler = scheduler;
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
         this._bankedRegisters.set(CPU_MODES.SVC, new StaticArray(2));
@@ -80,7 +86,8 @@ export class ARM7CPU {
         this.CPSR = 0x6000001F;
     }
 
-    addCycles(val: u32): void {
+    addCycles(val: u32 = 1): void {
+        this.scheduler.addCycles(val);
     }
 
     tick(): void {
@@ -101,6 +108,7 @@ export class ARM7CPU {
         if (testCondition(this)) {
             handler(this);
         }
+        this.addCycles(1);
     }
 
     canExecute(): boolean {
