@@ -8,4 +8,15 @@ export default class PaletteRam extends MemoryMapImpl {
         super(data, 0x05000000)
     }
 
+
+    get buffer(): Uint8Array {
+        return this.data;
+    }
+
+    getColour(index: u8): u16 {
+        let ptr = changetype<usize>(this.data);
+        ptr += (index * 2);
+        return load<u16>(ptr);
+    }
+
 }

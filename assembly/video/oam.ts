@@ -7,4 +7,9 @@ export class OAM extends MemoryMapImpl {
         super(data, 0x07000000);
     }
 
+
+    get buffer(): Uint8Array {
+        return this.data;
+    }
+
 }

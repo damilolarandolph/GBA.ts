@@ -78,8 +78,8 @@ export class CompositionMixer {
                 }
             }
 
+            // Can no pixel be found ? 
             store<u16>(out + index, topCompPixel ? topCompPixel.colour : 0);
-
         }
     }
 
