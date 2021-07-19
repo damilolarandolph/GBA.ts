@@ -55,16 +55,14 @@ export class Scheduler {
             return;
         }
 
-        let min = this.heap.peekMin();
-        let done = false;
+        let min = this.heap.extractMin();
 
-        while (min.at <= this.timeStamp && !done) {
+        while (true) {
             min.run(this, this.timeStamp - min.at);
-            this.heap.delete(min);
-            if (this.size != 0) {
-                min = this.heap.peekMin();
+            if (this.size != 0 && this.heap.peekMin().at <= this.timeStamp) {
+                min = this.heap.extractMin();
             } else {
-                done = true;
+                break;
             }
 
         }
@@ -125,6 +123,11 @@ export class MinHeap<T extends Node> {
             return;
         }
 
+        if (this.size == 1) {
+            this.backingArray[item.nodeIndex] = null;
+            --this._size;
+            return;
+        }
         let lastItem = this.getIndex(this._size - 1);
         this.swap(item, lastItem as T);
         this.backingArray[item.nodeIndex] = null;
