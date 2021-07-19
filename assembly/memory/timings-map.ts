@@ -77,7 +77,7 @@ export namespace Timing {
 
     }
 
-    export function word(address: u32): u32 {
+    export function word(address: u32, access: Access): u32 {
         let region = determineMemoryRegion(address);
         switch (region) {
             case MemoryRegions.BIOS:
@@ -94,11 +94,23 @@ export namespace Timing {
             // Gamepak has a 16 bit bus so 32 bit accesses are split into
             // an initial nonsequential access and a sequential access
             case MemoryRegions.GAMEPAK_1:
-                return 1 + GAMEPAK_0_N + GAMEPAK_0_S;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_0_S + GAMEPAK_0_S;
+                } else {
+                    return 1 + GAMEPAK_0_N + GAMEPAK_0_S;
+                }
             case MemoryRegions.GAMEPAK_2:
-                return 1 + GAMEPAK_1_N + GAMEPAK_1_S;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_1_S + GAMEPAK_1_S;
+                } else {
+                    return 1 + GAMEPAK_1_N + GAMEPAK_1_S;
+                }
             case MemoryRegions.GAMEPAK_3:
-                return 1 + GAMEPAK_2_N + GAMEPAK_2_S;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_2_S + GAMEPAK_2_S;
+                } else {
+                    return 1 + GAMEPAK_2_N + GAMEPAK_2_S;
+                }
             default:
                 trace("Unknown timing region");
                 return 0;
@@ -107,7 +119,7 @@ export namespace Timing {
     }
 
 
-    export function halfWord(address: u32): u32 {
+    export function halfWord(address: u32, access: Access): u32 {
         let region = determineMemoryRegion(address);
         switch (region) {
             case MemoryRegions.BIOS:
@@ -119,13 +131,24 @@ export namespace Timing {
                 return 1;
             case MemoryRegions.WRAM1:
                 return 3;
-
             case MemoryRegions.GAMEPAK_1:
-                return 1 + GAMEPAK_0_N;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_0_S;
+                } else {
+                    return 1 + GAMEPAK_0_N;
+                }
             case MemoryRegions.GAMEPAK_2:
-                return 1 + GAMEPAK_1_N;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_1_S;
+                } else {
+                    return 1 + GAMEPAK_1_N;
+                }
             case MemoryRegions.GAMEPAK_3:
-                return 1 + GAMEPAK_2_N;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_2_S;
+                } else {
+                    return 1 + GAMEPAK_2_N;
+                }
             default:
                 trace("Unknown timing region");
                 return 0;
@@ -134,7 +157,7 @@ export namespace Timing {
     }
 
 
-    export function byte(address: u32): u32 {
+    export function byte(address: u32, access: Access): u32 {
         let region = determineMemoryRegion(address);
         switch (region) {
             case MemoryRegions.BIOS:
@@ -146,13 +169,18 @@ export namespace Timing {
                 return 1;
             case MemoryRegions.WRAM1:
                 return 3;
-
             case MemoryRegions.GAMEPAK_1:
-                return 1 + GAMEPAK_0_N;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_0_S;
+                } else {
+                    return 1 + GAMEPAK_0_N;
+                }
             case MemoryRegions.GAMEPAK_2:
-                return 1 + GAMEPAK_1_N;
-            case MemoryRegions.GAMEPAK_3:
-                return 1 + GAMEPAK_2_N;
+                if (access == Access.SEQUENTIAL) {
+                    return 1 + GAMEPAK_1_S;
+                } else {
+                    return 1 + GAMEPAK_1_N;
+                }
             case MemoryRegions.GAMEPAK_SRAM:
                 return 1 + SRAM_WAIT;
             default:
