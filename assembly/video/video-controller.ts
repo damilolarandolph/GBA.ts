@@ -90,6 +90,7 @@ export class VideoController implements IODevice {
         this.interruptManager = interruptManager;
         this.scheduler = scheduler;
         VideoEvents.HBLANK = new VideoEvent(this, VideoEvents.HBLANK_HANDLER);
+        VideoEvents.HBLANK_END = new VideoEvent(this, VideoEvents.HBLANK_END_HANDLER);
         this.scheduler.schedule(VideoEvents.HBLANK, 960);
     }
     writeIO(address: u32, value: u8): void {
