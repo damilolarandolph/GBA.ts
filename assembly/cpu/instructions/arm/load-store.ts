@@ -1,3 +1,4 @@
+import { Timing } from "../../../memory/timings-map";
 import { getBit, getBits, setBit } from "../../../utils/bits";
 import { ARM7CPU, CPU_MODES, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
@@ -175,10 +176,10 @@ export function LDM3(cpu: ARM7CPU): void {
 
 export function LDR(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
-
     let lastBits = u32(addr & 0x3);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let shifterOutput = rotateRight(cpu.read32(addr), 8 * lastBits, cpu);
-
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (rd == 15) {
         cpu.PC = shifterOutput.operand & 0xFFFFFFFE;
@@ -190,6 +191,8 @@ export function LDR(cpu: ARM7CPU): void {
 }
 
 export function STR(cpu: ARM7CPU): void {
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let addr = deduceByteAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rdValue = cpu.readRegister(rd);
@@ -200,6 +203,8 @@ export function STR(cpu: ARM7CPU): void {
 }
 
 export function STRT(cpu: ARM7CPU): void {
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let addr = deduceByteAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.write32(addr, cpu.readRegister(rd));
@@ -207,10 +212,10 @@ export function STRT(cpu: ARM7CPU): void {
 
 export function LDRT(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
-
     let lastBits = u32(addr & 0x3);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let shifterOutput = rotateRight(cpu.read32(addr), 8 * lastBits, cpu);
-
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (rd == 15) {
         cpu.PC = shifterOutput.operand;
@@ -221,6 +226,8 @@ export function LDRT(cpu: ARM7CPU): void {
 
 export function LDRB(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let readValue = cpu.read8(addr);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.writeRegister(rd, readValue);
@@ -228,18 +235,24 @@ export function LDRB(cpu: ARM7CPU): void {
 
 export function STRB(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.write8(addr, u8(cpu.readRegister(rd) & 0xff))
 }
 
 export function STRBT(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.write8(addr, u8(cpu.readRegister(rd) & 0xff))
 }
 
 export function LDRBT(cpu: ARM7CPU): void {
     let addr = deduceByteAddressing(cpu);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let ldrbVal = cpu.read8(addr);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.writeRegister(rd, ldrbVal);
@@ -249,6 +262,8 @@ export function LDRBT(cpu: ARM7CPU): void {
 
 export function LDRH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let ldrbVal = cpu.read16(addr);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     cpu.writeRegister(rd, ldrbVal);
@@ -256,6 +271,8 @@ export function LDRH(cpu: ARM7CPU): void {
 
 export function STRH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rdVal: u16 = u16(cpu.readRegister(rd) & 0xffff);
     // trace("STRHVAL", 1, rdVal);
@@ -265,7 +282,8 @@ export function STRH(cpu: ARM7CPU): void {
 
 export function LDRSB(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
-
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let ldrbVal: u32 = cpu.read8(addr);
     let rd = getBits(cpu.currentInstruction, 15, 12);
 
@@ -277,6 +295,8 @@ export function LDRSB(cpu: ARM7CPU): void {
 
 export function LDRSH(cpu: ARM7CPU): void {
     let addr = deduceMiscAddressing(cpu);
+    cpu.addCycles(1);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let ldrbVal: u32 = cpu.read16(addr);
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -294,10 +314,13 @@ export function SWP(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let rm = getBits(cpu.currentInstruction, 3, 0);
-
+    cpu.prefetch();
     let lastBits = u32(cpu.readRegister(rn) & 0x3);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let shifterOut = rotateRight(cpu.read32(cpu.readRegister(rn)), 8 * lastBits, cpu);
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write32(cpu.readRegister(rn), cpu.readRegister(rm))
+    cpu.addCycles(1);
     cpu.writeRegister(rd, shifterOut.operand);
 }
 export function SWPB(cpu: ARM7CPU): void {
@@ -305,10 +328,12 @@ export function SWPB(cpu: ARM7CPU): void {
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let rm = getBits(cpu.currentInstruction, 3, 0);
 
+    cpu.prefetch();
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let swpbVal = cpu.read8(cpu.readRegister(rn) & 0xff)
-
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write8(cpu.readRegister(rn), u8(cpu.readRegister(rm) & 0xff))
-
+    cpu.addCycles(1);
     cpu.writeRegister(rd, swpbVal);
 }
 

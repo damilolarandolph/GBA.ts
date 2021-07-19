@@ -1,5 +1,6 @@
 import { GBA } from '../gba';
 import { SystemMemory } from '../memory/memory';
+import { Timing } from '../memory/timings-map';
 import { Scheduler } from '../scheduler';
 import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
@@ -41,6 +42,7 @@ export class ARM7CPU {
     private _SPSRs: Map<CPU_MODES, u32> = new Map();
     public totalCycles: u64 = 0;
     private scheduler: Scheduler;
+    public accessType: Timing.Access = Timing.Access.NON_SEQUENTIAL;
 
 
     constructor(
@@ -123,16 +125,17 @@ export class ARM7CPU {
 
         while (this._opQueue.length < 2) {
             this._opQueue.enqueue(this.read32(this.PC));
+            this.accessType = Timing.Access.SEQUENTIAL;
             this.PC += 4;
         }
     }
+
 
     private getOpHandler(instruction: u32): opHandler {
         let row = getBits(instruction, 27, 20);
         let col = getBits(instruction, 7, 4);
         return (armOpTable[row][col] as opHandler);
     }
-
 
 
 
@@ -194,6 +197,7 @@ export class ARM7CPU {
     writeRegister(regNo: i32, val: u32, mode: CPU_MODES = this._currentMode): void {
         this.writeRegMode(regNo, val, mode);
         if (regNo == 15) {
+            this.accessType = Timing.Access.NON_SEQUENTIAL;
             this.clearPipeline();
         }
     }
@@ -254,29 +258,32 @@ export class ARM7CPU {
     }
 
     read32(address: u32): u32 {
+        this.addCycles(Timing.word(address, this.accessType));
         return this._memoryMap.read32(address);
     }
 
     read16(address: u32): u16 {
+        this.addCycles(Timing.halfWord(address, this.accessType));
         return this._memoryMap.read16(address);
     }
 
     read8(address: u32): u8 {
+        this.addCycles(Timing.halfWord(address, this.accessType));
         return this._memoryMap.read8(address);
     }
 
     write8(address: u32, value: u8): void {
+        this.addCycles(Timing.byte(address, this.accessType));
         this._memoryMap.write8(address, value);
     }
 
     write16(address: u32, value: u16): void {
-        if (address == <u32>234881040) {
-            trace('PC', 1, this.PC);
-        }
+        this.addCycles(Timing.halfWord(address, this.accessType));
         this._memoryMap.write16(address, value)
     }
 
     write32(address: u32, value: u32): void {
+        this.addCycles(Timing.word(address, this.accessType));
         this._memoryMap.write32(address, value);
     }
 

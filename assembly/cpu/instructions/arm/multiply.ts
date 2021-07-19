@@ -8,15 +8,15 @@ function deduceMStates(operand: u32): u32 {
     let group2 = getBits(operand, 31, 15);
     let group3 = getBits(operand, 30, 23);
 
-    if (group1 == 0x1FFFFFF || group1 == 0) {
+    if (group1 == 0xFFFFFF || group1 == 0) {
         return 1;
     }
 
-    if (group2 == 0x1FFFF || group2 == 0) {
+    if (group2 == 0xFFFF || group2 == 0) {
         return 2;
     }
 
-    if (group3 == 0xFF || group3 == 0) {
+    if (group3 == 0x7F || group3 == 0) {
         return 3;
     }
 

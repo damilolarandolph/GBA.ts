@@ -3,7 +3,6 @@ import { ARM7CPU, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 
 export function BBL(cpu: ARM7CPU): void {
-
     let instruction = cpu.currentInstruction;
     let lBit = getBit(instruction, 24);
     let targetAddr: u32 = getBits(instruction, 23, 0);
