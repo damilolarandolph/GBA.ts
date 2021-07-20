@@ -1,287 +1,5 @@
+import { getBit, getBits, setBit } from "../utils/bits";
 import { BGLayers, BGModes, WindowLayers } from "./video-controller";
-
-
-export class VideoUnitRegisters {
-
-    private backingArray: StaticArray<u8> = new StaticArray<u8>(86);
-    public arrayPointer: usize;
-    public displayControl: DISPCNT;
-    public dispStatus: DISPSTAT;
-    public bgControl: StaticArray<BGRegs> = new StaticArray<BGRegs>(4);
-    public windowRegs: WindowRegs;
-
-    constructor() {
-        this.arrayPointer = changetype<usize>(this.backingArray);
-        this.displayControl = new DISPCNT(this.arrayPointer);
-        this.dispStatus = new DISPSTAT(this.arrayPointer + 0x4);
-        this.bgControl[BGLayers.BG_0] = new BGRegs(this.arrayPointer + 0x8, this.arrayPointer + 0x10);
-        this.bgControl[BGLayers.BG_1] = new BGRegs(this.arrayPointer + 0xA, this.arrayPointer + 0x14);
-        this.bgControl[BGLayers.BG_2] = new BGRegs(this.arrayPointer + 0xC, this.arrayPointer + 0x18, this.arrayPointer + 0x20);
-        this.bgControl[BGLayers.BG_3] = new BGRegs(this.arrayPointer + 0xE, this.arrayPointer + 0x1C, this.arrayPointer + 0x30);
-        this.windowRegs = new WindowRegs(this.arrayPointer + 0x40);
-    }
-
-
-
-}
-
-export class DISPCNT {
-    private dataPtr: usize;
-
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
-    }
-
-    get mode(): BGModes {
-        return load<u8>(this.dataPtr) & 0x7;
-    }
-
-    get frameSelect(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x10) != 0;
-    }
-
-    get HblankInterval(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x20) != 0;
-    }
-
-    get isOBJ2D(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x40) != 0;
-    }
-
-    get forcedBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x80) != 0;
-    }
-
-    isDisplay(layer: BGLayers): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        let mask = 0x1;
-        mask <<= layer;
-        return (data & mask) != 0
-    }
-
-    isWindow(window: WindowLayers): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        let mask = 0x10;
-        mask <<= window;
-        return (data & mask) != 0
-    }
-
-    get isOBJWindow(): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        return (data & 0x80) != 0;
-    }
-}
-
-export class DISPSTAT {
-    private dataPtr: usize;
-
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
-    }
-
-
-    get vBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x1) != 0;
-    }
-
-    set vBlank(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        data >>>= 1;
-        data <<= 1;
-        if (val) {
-            data |= 0x1;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get hBlank(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x2) != 0;
-    }
-
-    set hBlank(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        if (val) {
-            data |= 0x2;
-        } else {
-            // 1111101 (0x7D)
-            data &= 0xFD;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get vCountFlag(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x4) != 0;
-    }
-
-    set vCountFlag(val: boolean) {
-        let data = load<u8>(this.dataPtr);
-        if (val) {
-            data |= 0x4
-        } else {
-            data &= 0xFB;
-        }
-        store<u8>(this.dataPtr, data);
-    }
-
-    get vBlankIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x8) != 0;
-    }
-
-    get hBlankIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x10) != 0;
-    }
-
-    get vCountIRQ(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x20) != 0;
-    }
-
-    get LY(): u8 {
-        let data = load<u8>(this.dataPtr + 1);
-        return data;
-    }
-
-    set LY(val: u8) {
-        store<u8>(this.dataPtr + 1, val);
-    }
-}
-
-
-export class BGRegs {
-    private dataPtr: usize;
-    private scrollPtr: usize;
-    private rotScalePtr: usize;
-
-    constructor(
-        pointer: usize,
-        scrollPtr: usize,
-        rotSclePtr: usize = -1
-    ) {
-        this.dataPtr = pointer;
-        this.scrollPtr = scrollPtr;
-        this.rotScalePtr = rotSclePtr;
-    }
-
-    get priority(): u8 {
-        let data = load<u8>(this.dataPtr);
-        return u8(data & 0x3)
-    }
-
-    get charBaseBlock(): u8 {
-        let data = load<u8>(this.dataPtr);
-        data >>= 2;
-        return u8(data & 0x3);
-    }
-
-    get mosaic(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x40) != 0;
-    }
-
-    get is16Palette(): boolean {
-        let data = load<u8>(this.dataPtr);
-        return (data & 0x80) != 0;
-    }
-
-    get screenBaseBlock(): u8 {
-        let data = load<u8>(this.dataPtr + 1);
-        return u8(data & 0x10);
-    }
-
-    get displayAreaWrap(): boolean {
-        let data = load<u8>(this.dataPtr + 1);
-        data >>>= 5;
-        return (data & 0x1) != 0;
-    }
-
-    get screenSize(): u8 {
-        let data = load<u8>(this.dataPtr + 1);
-        data >>>= 6;
-        return u8(data & 0x3);
-    }
-
-    get HOFS(): u8 {
-        let data = load<u8>(this.scrollPtr);
-        return u8(data);
-    }
-
-    get VOFS(): u8 {
-        let data = load<u8>(this.scrollPtr + 2);
-        return u8(data);
-    }
-
-    get xReference(): f32 {
-        let data = load<u32>(this.rotScalePtr + 8);
-        let fractional = u8(data & 0xFF);
-        let integer = u32((data >>> 8) & 0x7FFFF);
-        let sign = (data & 0x8000000) != 0;
-
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-
-    get yReference(): f32 {
-        let data = load<u32>(this.rotScalePtr + 0xC);
-        let fractional = u8(data & 0xFF);
-        let integer = u32((data >>> 8) & 0x7FFFF);
-        let sign = (data & 0x8000000) != 0;
-
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-
-    get dx(): f32 {
-        let data = load<u16>(this.rotScalePtr);
-        let fractional = u8(data & 0xff);
-        let integer = u8((data >>> 8) & 0x7f);
-        let sign = (data & 0x8000) != 0;
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-
-    // RIP
-    get dmx(): f32 {
-        let data = load<u32>(this.rotScalePtr + 2);
-        let fractional = u8(data & 0xff);
-        let integer = u8((data >>> 8) & 0x7f);
-        let sign = (data & 0x8000) != 0;
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-
-    get dy(): f32 {
-        let data = load<u32>(this.rotScalePtr + 4);
-        let fractional = u8(data & 0xff);
-        let integer = u8((data >>> 8) & 0x7f);
-        let sign = (data & 0x8000) != 0;
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-
-    get dmy(): f32 {
-        let data = load<u32>(this.rotScalePtr + 6);
-        let fractional = u8(data & 0xff);
-        let integer = u8((data >>> 8) & 0x7f);
-        let sign = (data & 0x8000) != 0;
-        // is this correct ?
-        let float = f32(integer) + (f32(fractional) / 1000);
-        return copysign<f32>(float, sign ? -1.0 : 1.0);
-    }
-}
 
 
 @unmanaged
@@ -292,87 +10,332 @@ export class Dimension {
     bottomY: u8 = 0;
 };
 
+enum IORegions {
+    DISPCNT = 0x0,
+    DISPSTAT = 0x4,
+    BG0CNT = 0x8,
+    BG1CNT = 0xA,
+    BG2CNT = 0xC,
+    BG3CNT = 0xE,
+    BG0SCROLL = 0x10,
+    BG1SCROLL = 0x14,
+    BG2SCROLL = 0x18,
+    BG3SCROLL = 0xC,
+    WIN0H = 0x40,
+    WIN0V = 0x44,
+    WIN1H = 0x42,
+    WIN1V = 0x46,
+    WININ = 0x48,
+    WINOUT = 0x4A,
+}
 
-class WindowRegs {
-    private dataPtr: usize;
 
-    constructor(pointer: usize) {
-        this.dataPtr = pointer;
+
+export class BGCNT {
+    priority: u8 = 0;
+    characterBaseBlock: u8 = 0;
+    mosaic: boolean = false;
+    palette256: boolean = false;
+    screenBaseBlock: u8 = 0;
+    overflowWrap: boolean = false;
+    screenSize: u8 = 0;
+    hofs: u8 = 0;
+    vofs: u8 = 0;
+
+    readCNT(byte: i32): u8 {
+        let result: u8 = 0;
+        if (byte == 1) {
+            result |= this.priority;
+            result |= (this.characterBaseBlock << 2);
+            result = <u8>setBit(result, 6, this.mosaic);
+            result = <u8>setBit(result, 7, this.palette256);
+        } else {
+            result &= this.screenBaseBlock;
+            result = <u8>setBit(result, 5, this.overflowWrap);
+            result |= (this.screenSize << 6);
+        }
+        return result;
     }
 
-    getDimensions(window: WindowLayers): Dimension {
-        let pointer: usize = this.dataPtr;
-        if (window == WindowLayers.WINDOW_1) {
-            pointer += 2;
+    writeCNT(byte: i32, value: u8): void {
+        if (byte == 1) {
+            this.priority = value & 0x3;
+            this.characterBaseBlock = <u8>getBits(value, 3, 2);
+            this.mosaic = getBit(value, 6);
+            this.palette256 = getBit(value, 7);
+        } else {
+            this.screenBaseBlock = value & 0xf;
+            this.overflowWrap = getBit(value, 5);
+            this.screenSize = <u8>getBits(value, 7, 6);
         }
-        let horizontal = load<u16>(pointer);
-        pointer += 4;
-        let vertical = load<u16>(pointer);
-
-        let rightX = u8(horizontal & 0xff) + 1;
-        let leftX = u8((horizontal >>> 8) & 0xff);
-        let bottomY = u8(vertical & 0xff) + 1;
-        let topY = u8((vertical >>> 8) & 0xff);
-
-        return { rightX, leftX, bottomY, topY };
     }
 
+}
 
-    windowBGEnable(window: WindowLayers, bgLayer: BGLayers): boolean {
-        let pointer: usize = this.dataPtr + 8;
-        if (window == WindowLayers.WINDOW_1) {
-            pointer += 1;
-        }
-        let data = load<u8>(pointer);
-        data >>= bgLayer;
-        return (data & 0x1) != 0;
+export class Window {
+    bg0Enable: boolean = false;
+    bg1Enable: boolean = false;
+    bg2Enable: boolean = false;
+    bg3Enable: boolean = false;
+    objEnable: boolean = false;
+    effectsEnable: boolean = false;
+    dimensions: Dimension = new Dimension();
+
+    write(value: u8): void {
+        this.bg0Enable = getBit(value, 0);
+        this.bg1Enable = getBit(value, 1);
+        this.bg2Enable = getBit(value, 2);
+        this.bg3Enable = getBit(value, 3);
+        this.objEnable = getBit(value, 4);
+        this.effectsEnable = getBit(value, 5);
     }
 
-    objEnable(window: WindowLayers): boolean {
-        let pointer: usize = this.dataPtr + 8;
-        if (window == WindowLayers.WINDOW_1) {
-            pointer += 1;
-        }
-        let data = load<u8>(pointer);
-        return (data & 0x10) != 0;
+    read(): u8 {
+        let result: u8 = 0;
+        result = <u8>setBit(result, 0, this.bg0Enable);
+        result = <u8>setBit(result, 1, this.bg1Enable);
+        result = <u8>setBit(result, 2, this.bg2Enable);
+        result = <u8>setBit(result, 3, this.bg3Enable);
+        result = <u8>setBit(result, 4, this.objEnable);
+        result = <u8>setBit(result, 5, this.effectsEnable);
+        return result;
     }
+}
 
-    colorSpecialEnable(window: WindowLayers): boolean {
-        let pointer: usize = this.dataPtr + 8;
-        if (window == WindowLayers.WINDOW_1) {
-            pointer += 1;
+
+export class GPURegisters {
+
+    // DISPCNT
+    BGMODE: u8 = 0;
+    frameSelect: boolean = false;
+    hBlankIntervalFree: boolean = false;
+    objMap1D: boolean = false;
+    forcedBlank: boolean = false;
+    bg0Enable: boolean = false;
+    bg1Enable: boolean = false;
+    bg2Enable: boolean = false;
+    bg3Enable: boolean = false;
+    objEnable: boolean = false;
+    window0Enable: boolean = false;
+    window1Enable: boolean = false;
+    objWindowEnable: boolean = false;
+
+
+    // DISPSTAT
+    vBlankFlag: boolean = false;
+    hBlankFlag: boolean = false;
+    vCounterFlag: boolean = false;
+    vBlankIRQEnable: boolean = false;
+    hBlankIRQEnable: boolean = false;
+    vCounterIRQEnable: boolean = false;
+    vCountSetting: u8 = 0;
+    ly: u8 = 0;
+
+
+    // BG CONTROLS
+    bg0: BGCNT = new BGCNT();
+    bg1: BGCNT = new BGCNT();
+    bg2: BGCNT = new BGCNT();
+    bg3: BGCNT = new BGCNT();
+
+
+    // Window Controls
+    win0: Window = new Window();
+    win1: Window = new Window();
+    objWin: Window = new Window();
+    winOut: Window = new Window();
+
+
+
+
+    public write(index: u32, value: u8): void {
+        let currBG: BGCNT;
+        switch (index) {
+            case IORegions.DISPCNT:
+                this.BGMODE = <u8>getBits(value, 2, 0);
+                this.frameSelect = getBit(value, 4);
+                this.hBlankIntervalFree = getBit(value, 5);
+                this.objMap1D = getBit(value, 6);
+                this.forcedBlank = getBit(value, 7);
+                break;
+            case IORegions.DISPCNT + 1:
+                this.bg0Enable = getBit(value, 0);
+                this.bg1Enable = getBit(value, 1);
+                this.bg2Enable = getBit(value, 2);
+                this.bg3Enable = getBit(value, 3);
+                this.objEnable = getBit(value, 4);
+                this.window0Enable = getBit(value, 5);
+                this.window1Enable = getBit(value, 6);
+                this.objWindowEnable = getBit(value, 7);
+                break;
+            case IORegions.DISPSTAT:
+                this.vBlankIRQEnable = getBit(value, 3);
+                this.hBlankIRQEnable = getBit(value, 4);
+                this.vCounterIRQEnable = getBit(value, 5);
+                break;
+            case IORegions.DISPSTAT + 1:
+                this.vCountSetting = value;
+                break;
+            case IORegions.BG0CNT:
+                this.bg0.writeCNT(1, value);
+                break;
+            case IORegions.BG0CNT + 1:
+                this.bg0.writeCNT(2, value);
+                break;
+            case IORegions.BG1CNT:
+                this.bg1.writeCNT(1, value);
+                break;
+            case IORegions.BG1CNT + 1:
+                this.bg1.writeCNT(2, value);
+                break;
+            case IORegions.BG2CNT:
+                this.bg2.writeCNT(1, value);
+                break;
+            case IORegions.BG2CNT + 1:
+                this.bg2.writeCNT(2, value);
+                break;
+            case IORegions.BG3CNT:
+                this.bg3.writeCNT(1, value);
+                break;
+            case IORegions.BG3CNT + 1:
+                this.bg3.writeCNT(2, value);
+                break;
+            case IORegions.BG0SCROLL:
+                this.bg0.hofs = value;
+                break;
+            case IORegions.BG0SCROLL + 2:
+                this.bg0.vofs = value;
+                break;
+            case IORegions.BG1SCROLL:
+                this.bg1.hofs = value;
+                break;
+            case IORegions.BG1SCROLL + 2:
+                this.bg1.vofs = value;
+                break;
+            case IORegions.BG2SCROLL:
+                this.bg2.hofs = value;
+                break;
+            case IORegions.BG2SCROLL + 2:
+                this.bg2.vofs = value;
+                break;
+            case IORegions.BG3SCROLL:
+                this.bg3.hofs = value;
+                break;
+            case IORegions.BG3SCROLL + 2:
+                this.bg3.vofs = value;
+                break;
+            case IORegions.WIN0H:
+                this.win0.dimensions.leftX = value;
+                break;
+            case IORegions.WIN0H + 1:
+                this.win0.dimensions.rightX = value;
+                break;
+            case IORegions.WIN1H:
+                this.win1.dimensions.leftX = value;
+                break;
+            case IORegions.WIN1H + 1:
+                this.win1.dimensions.rightX = value;
+                break;
+            case IORegions.WIN0V:
+                this.win0.dimensions.bottomY = value;
+                break;
+            case IORegions.WIN0V + 1:
+                this.win0.dimensions.topY = value;
+                break;
+            case IORegions.WIN1V:
+                this.win1.dimensions.bottomY = value;
+                break;
+            case IORegions.WIN1V + 1:
+                this.win1.dimensions.topY = value;
+                break;
+            case IORegions.WININ:
+                this.win0.write(value);
+                break;
+            case IORegions.WININ + 1:
+                this.win1.write(value);
+                break;
+            case IORegions.WINOUT:
+                this.winOut.write(value);
+                break;
+            case IORegions.WINOUT + 1:
+                this.objWin.write(value);
+                break;
         }
-        let data = load<u8>(pointer);
-        return (data & 0x20) != 0
-    }
+    };
 
-
-    windowBGEnableOut(isObj: boolean, bgLayer: BGLayers): boolean {
-        let pointer: usize = this.dataPtr + 0xA;
-        if (isObj) {
-            pointer += 1;
+    public read(index: u32): u8 {
+        let result: u32 = 0;
+        switch (index) {
+            case IORegions.DISPCNT:
+                result &= this.BGMODE;
+                result = setBit(result, 4, this.frameSelect);
+                result = setBit(result, 5, this.hBlankIntervalFree);
+                result = setBit(result, 6, this.objMap1D);
+                result = setBit(result, 7, this.forcedBlank);
+                break;
+            case IORegions.DISPCNT + 1:
+                result = setBit(result, 0, this.bg0Enable);
+                result = setBit(result, 1, this.bg1Enable);
+                result = setBit(result, 2, this.bg2Enable);
+                result = setBit(result, 3, this.bg3Enable);
+                result = setBit(result, 4, this.objEnable);
+                result = setBit(result, 5, this.window0Enable);
+                result = setBit(result, 6, this.window1Enable);
+                result = setBit(result, 7, this.objWindowEnable);
+                break;
+            case IORegions.DISPSTAT:
+                result = setBit(result, 0, this.vBlankFlag);
+                result = setBit(result, 1, this.hBlankFlag);
+                result = setBit(result, 2, this.vCounterFlag);
+                result = setBit(result, 3, this.vBlankIRQEnable);
+                result = setBit(result, 4, this.hBlankIRQEnable);
+                result = setBit(result, 5, this.vCounterIRQEnable);
+                break;
+            case IORegions.DISPSTAT + 1:
+                result = this.vCountSetting;
+                break;
+            case IORegions.DISPSTAT + 2:
+                result = this.ly;
+                break;
+            case IORegions.BG0CNT:
+                result = this.bg0.readCNT(1);
+                break;
+            case IORegions.BG0CNT + 1:
+                result = this.bg0.readCNT(2);
+                break;
+            case IORegions.BG1CNT:
+                result = this.bg1.readCNT(1);
+                break;
+            case IORegions.BG1CNT + 1:
+                result = this.bg1.readCNT(2);
+                break;
+            case IORegions.BG2CNT:
+                result = this.bg2.readCNT(1);
+                break;
+            case IORegions.BG2CNT + 1:
+                result = this.bg2.readCNT(2);
+                break;
+            case IORegions.BG3CNT:
+                result = this.bg3.readCNT(1);
+                break;
+            case IORegions.BG3CNT + 1:
+                result = this.bg3.readCNT(2);
+                break;
+            case IORegions.WININ:
+                result = this.win0.read();
+                break;
+            case IORegions.WININ + 1:
+                result = this.win1.read();
+                break;
+            case IORegions.WINOUT:
+                result = this.winOut.read();
+                break;
+            case IORegions.WINOUT + 1:
+                result = this.objWin.read();
+                break;
         }
-        let data = load<u8>(pointer);
-        data >>= bgLayer;
-        return (data & 0x1) != 0;
-    }
 
-    objEnableOut(isObj: boolean): boolean {
-        let pointer: usize = this.dataPtr + 8;
-        if (isObj) {
-            pointer += 1;
-        }
-        let data = load<u8>(pointer);
-        return (data & 0x10) != 0;
-    }
-
-    colorSpecialEnableOut(isObj: boolean): boolean {
-        let pointer: usize = this.dataPtr + 8;
-        if (isObj) {
-            pointer += 1;
-        }
-        let data = load<u8>(pointer);
-        return (data & 0x20) != 0
+        return u8(result);
     }
 
 }

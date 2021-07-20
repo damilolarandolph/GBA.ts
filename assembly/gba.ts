@@ -9,7 +9,7 @@ import { Scheduler } from "./scheduler";
 import { OAM } from "./video/oam";
 import PaletteRam from "./video/palette-ram";
 import { VideoController } from "./video/video-controller";
-import { VideoUnitRegisters } from "./video/VideoUnitRegisters";
+import { GPURegisters } from "./video/VideoUnitRegisters";
 export { cartData } from './gamepak/gamepak';
 import VRAM from "./video/vram";
 export class GBA {
@@ -20,7 +20,7 @@ export class GBA {
     private IOMap: IOMap;
     private OAM: OAM = new OAM();
     private VRAM: VRAM;
-    private videoRegisters: VideoUnitRegisters = new VideoUnitRegisters();
+    private videoRegisters: GPURegisters = new GPURegisters();
     private WRAM: WRAM1 = new WRAM1();
     private WRAM2: WRAM2 = new WRAM2();
     private PaletteRam: PaletteRam = new PaletteRam();

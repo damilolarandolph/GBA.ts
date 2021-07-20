@@ -1,4 +1,4 @@
-import { Dimension, VideoUnitRegisters } from "./VideoUnitRegisters";
+import { BGCNT, Dimension, GPURegisters, Window } from "./VideoUnitRegisters";
 import { BGLayers, WindowLayers } from "./video-controller";
 
 
@@ -25,47 +25,54 @@ export class CompositionMixer {
     }
     mix(
         out: usize,
-        gpuRegs: VideoUnitRegisters,
+        gpuRegs: GPURegisters,
         layerMin: BGLayers,
         layerMax: BGLayers
     ): void {
 
-        let win0Dimensions = gpuRegs.windowRegs.getDimensions(WindowLayers.WINDOW_0);
-        let win1Dimensions = gpuRegs.windowRegs.getDimensions(WindowLayers.WINDOW_1);
-        let currentLine = gpuRegs.dispStatus.LY;
+
         for (let index = 0; index < 240; ++index) {
             let topLayer: BGLayers = -1;
             let topCompPixel: CompositionPixel | null = null;
-            let spritePixel = load<CompositionPixel>(changetype<usize>(this.OBJ), sizeof<CompositionPixel>() * index);
+            let spritePixel = load<CompositionPixel>(changetype<usize>(this.OBJ) + (sizeof<CompositionPixel>() * index));
+            let window: Window;
+            let currentLine = gpuRegs.ly;
+
+            if (gpuRegs.window0Enable && this.intersects(index, currentLine, gpuRegs.win0.dimensions)) {
+                window = gpuRegs.win0;
+            } else if (gpuRegs.window1Enable && this.intersects(index, currentLine, gpuRegs.win1.dimensions)) {
+                window = gpuRegs.win1;
+            } else if (gpuRegs.objWindowEnable && this.intersects(index, currentLine, this.objWindowDimensions)) {
+                window = gpuRegs.objWin;
+            } else {
+                window = gpuRegs.winOut;
+            }
+
 
             for (let layerIndex = layerMin; layerIndex <= layerMax; ++layerIndex) {
 
-                let newTop = load<CompositionPixel>(this.BGBuffer(layerIndex), sizeof<CompositionPixel>() * index);
+                let newTop = load<CompositionPixel>(this.BGBuffer(layerIndex) + (sizeof<CompositionPixel>() * index));
 
-                if (!gpuRegs.displayControl.isDisplay(layerIndex)) {
+                if (
+                    (layerIndex == 0 && (!gpuRegs.bg0Enable || !window.bg0Enable))
+                    || (layerIndex == 1 && (!gpuRegs.bg1Enable || !window.bg1Enable))
+                    || (layerIndex == 2 && (!gpuRegs.bg2Enable || !window.bg2Enable))
+                    || (layerIndex == 3 && (!gpuRegs.bg3Enable || !window.bg3Enable))
+                ) {
                     continue;
                 }
 
-                if (gpuRegs.displayControl.isWindow(WindowLayers.WINDOW_0)) {
-                    // TODO: Make this simpler
-                    if (this.intersects(index, currentLine, win0Dimensions)
-                        && !gpuRegs.windowRegs.windowBGEnable(WindowLayers.WINDOW_0, layerIndex)) {
-                        continue;
-                    }
-                } else if (gpuRegs.displayControl.isWindow(WindowLayers.WINDOW_1)) {
-                    if (this.intersects(index, currentLine, win1Dimensions)
-                        && !gpuRegs.windowRegs.windowBGEnable(WindowLayers.WINDOW_1, layerIndex)) {
-                        continue;
-                    }
-                } else if (gpuRegs.displayControl.isOBJWindow) {
-                    if (this.intersects(index, currentLine, this.objWindowDimensions)
-                        && !gpuRegs.windowRegs.windowBGEnableOut(true, layerIndex)
-                    ) {
-                        continue;
-                    }
-                } else if (!gpuRegs.windowRegs.windowBGEnableOut(false, layerIndex)) {
-                    continue;
-                }
+                let bg: BGCNT;
+
+                if (layerIndex == 0)
+                    bg = gpuRegs.bg0;
+                else if (layerIndex == 1)
+                    bg = gpuRegs.bg1
+                else if (layerIndex == 2)
+                    bg = gpuRegs.bg2
+                else if (layerIndex == 3)
+                    bg = gpuRegs.bg3
+
 
                 if (topCompPixel) {
                     if (topCompPixel.colour == 0 || topCompPixel.priority > newTop.priority) {
@@ -86,7 +93,7 @@ export class CompositionMixer {
 
 
     @inline
-    private intersects(x: u8, y: u8, dimension: Dimension): boolean {
+    private intersects(x: u32, y: u32, dimension: Dimension): boolean {
         return (x >= dimension.leftX && x <= dimension.rightX) && (y >= dimension.topY && y <= dimension.bottomY);
     }
 

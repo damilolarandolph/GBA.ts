@@ -5,7 +5,7 @@ import { CompositionMixer } from "./CompositionMixer";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
 import { VideoEvent, VideoEvents } from "./video-events";
-import { VideoUnitRegisters } from "./VideoUnitRegisters";
+import { GPURegisters } from "./VideoUnitRegisters";
 import VRAM from "./vram";
 
 
@@ -65,7 +65,7 @@ export class VideoController implements IODevice {
     public OAM: OAM;
     public VRAM: VRAM;
     public paletteRAM: PaletteRam;
-    private registers: VideoUnitRegisters;
+    private registers: GPURegisters;
     private interruptManager: InterruptManager;
     private writeBuffer: Uint16Array = new Uint16Array(38400);
     private readBuffer: Uint16Array = new Uint16Array(38400);
@@ -80,7 +80,7 @@ export class VideoController implements IODevice {
         vram: VRAM,
         paletteRAM: PaletteRam,
         interruptManager: InterruptManager,
-        videoRegs: VideoUnitRegisters,
+        videoRegs: GPURegisters,
         scheduler: Scheduler
     ) {
         this.OAM = oam;
@@ -95,18 +95,16 @@ export class VideoController implements IODevice {
     }
     writeIO(address: u32, value: u8): void {
         address &= 0x3FFFFFF;
-        let pointer = this.registers.arrayPointer + address;
-        store<u8>(pointer, value);
+        this.registers.write(address, value);
     }
     readIO(address: u32): u8 {
         address &= 0x3FFFFFF;
-        let pointer = this.registers.arrayPointer + address;
-        return load<u8>(pointer);
+        return this.registers.read(address);
     }
 
     drawLine(): void {
 
-        switch (this.registers.displayControl.mode) {
+        switch (this.registers.BGMODE) {
             case BGModes.MODE_0:
                 this.drawMode0Line();
                 break;
@@ -121,6 +119,11 @@ export class VideoController implements IODevice {
                 break;
             case BGModes.MODE_4:
                 this.drawMode4Line(BGLayers.BG_2, changetype<usize>(this.composition.BG2));
+                this.composition.mix(
+                    changetype<usize>(this.writeBuffer) + (this.registers.ly * 240),
+                    this.registers,
+                    BGLayers.BG_2,
+                    BGLayers.BG_2);
                 break;
             case BGModes.MODE_5:
                 this.drawMode5Line();
@@ -128,7 +131,7 @@ export class VideoController implements IODevice {
 
         }
 
-        ++this.registers.dispStatus.LY;
+        ++this.registers.ly;
 
     }
 
@@ -151,10 +154,9 @@ export class VideoController implements IODevice {
 
 
     private drawMode4Line(layer: BGLayers, buf: usize): void {
-        let reg = unchecked(this.registers.bgControl[layer])
         let vramPointer = changetype<usize>(this.VRAM.buffer);
         let palettePointer = changetype<usize>(this.paletteRAM.buffer);
-        let currentLine = this.registers.dispStatus.LY;
+        let currentLine = this.registers.ly;
         // Move pointer to current line
         vramPointer += (currentLine * 240)
 
