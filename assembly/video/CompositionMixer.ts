@@ -35,7 +35,7 @@ export class CompositionMixer {
             let topLayer: BGLayers = -1;
             let topCompPixel: CompositionPixel | null = null;
             let spritePixel = load<CompositionPixel>(changetype<usize>(this.OBJ) + (sizeof<CompositionPixel>() * index));
-            let window: Window;
+            let window: Window | null = null;
             let currentLine = gpuRegs.ly;
 
             if (gpuRegs.window0Enable && this.intersects(index, currentLine, gpuRegs.win0.dimensions)) {
@@ -44,7 +44,7 @@ export class CompositionMixer {
                 window = gpuRegs.win1;
             } else if (gpuRegs.objWindowEnable && this.intersects(index, currentLine, this.objWindowDimensions)) {
                 window = gpuRegs.objWin;
-            } else {
+            } else if (gpuRegs.window0Enable || gpuRegs.window1Enable || gpuRegs.objWindowEnable) {
                 window = gpuRegs.winOut;
             }
 
@@ -53,11 +53,11 @@ export class CompositionMixer {
 
                 let newTop = load<CompositionPixel>(this.BGBuffer(layerIndex) + (sizeof<CompositionPixel>() * index));
 
-                if (
-                    (layerIndex == 0 && (!gpuRegs.bg0Enable || !window.bg0Enable))
-                    || (layerIndex == 1 && (!gpuRegs.bg1Enable || !window.bg1Enable))
-                    || (layerIndex == 2 && (!gpuRegs.bg2Enable || !window.bg2Enable))
-                    || (layerIndex == 3 && (!gpuRegs.bg3Enable || !window.bg3Enable))
+                if (window != null &&
+                    ((layerIndex == 0 && (!gpuRegs.bg0Enable || !window.bg0Enable))
+                        || (layerIndex == 1 && (!gpuRegs.bg1Enable || !window.bg1Enable))
+                        || (layerIndex == 2 && (!gpuRegs.bg2Enable || !window.bg2Enable))
+                        || (layerIndex == 3 && (!gpuRegs.bg3Enable || !window.bg3Enable)))
                 ) {
                     continue;
                 }
