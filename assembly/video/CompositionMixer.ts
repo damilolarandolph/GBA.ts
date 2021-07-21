@@ -1,5 +1,5 @@
 import { BGCNT, Dimension, GPURegisters, Window } from "./VideoUnitRegisters";
-import { BGLayers, WindowLayers } from "./video-controller";
+import { BGLayers } from "./video-controller";
 
 
 @unmanaged export class CompositionPixel {
