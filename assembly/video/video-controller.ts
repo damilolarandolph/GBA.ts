@@ -1,4 +1,4 @@
-import InterruptManager from "../cpu/interrupt-manager";
+import { InterruptManager, Interrupts } from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
 import { Scheduler } from "../scheduler";
 import { CompositionMixer } from "./CompositionMixer";
@@ -17,16 +17,6 @@ export enum BGModes {
     MODE_4,
     MODE_5
 }
-enum IORegions {
-    DISPCNT = 0x4000000,
-    DISPSTAT = 0x4000004,
-    VCOUNT = 0x4000006,
-    BGCNT = 0x4000008,
-    BGHOVOFS = 0x4000010,
-    BG2X_LH = 0x4000028,
-    BG2P = 0x4000020,
-    BG3P = 0x400003,
-}
 
 export enum BGLayers {
     BG_0,
@@ -35,29 +25,6 @@ export enum BGLayers {
     BG_3,
     OBJ,
 }
-
-export enum WindowLayers {
-    WINDOW_0,
-    WINDOW_1,
-    OBJ_WINDOW,
-    OUTSIDE_WINDOW
-}
-
-
-
-
-@unmanaged
-class MapEntry {
-    tileNumber: u32;
-    hFlip: bool;
-    vFlip: bool;
-    palNumber: u16;
-}
-
-
-const buffer1: Uint16Array = new Uint16Array(38400);
-const buffer2: Uint16Array = new Uint16Array(38400);
-
 
 
 export class VideoController implements IODevice {
@@ -69,9 +36,7 @@ export class VideoController implements IODevice {
     private interruptManager: InterruptManager;
     private writeBuffer: Uint16Array = new Uint16Array(38400);
     private readBuffer: Uint16Array = new Uint16Array(38400);
-    private workingBuffer: number = 1;
     private composition: CompositionMixer = new CompositionMixer();
-    private currentDot: u32 = 0;
     private scheduler: Scheduler;
 
 
@@ -89,8 +54,10 @@ export class VideoController implements IODevice {
         this.paletteRAM = paletteRAM;
         this.interruptManager = interruptManager;
         this.scheduler = scheduler;
-        VideoEvents.HBLANK = new VideoEvent(this, VideoEvents.HBLANK_HANDLER);
-        VideoEvents.HBLANK_END = new VideoEvent(this, VideoEvents.HBLANK_END_HANDLER);
+        VideoEvents.HBLANK.controller = this;
+        VideoEvents.HBLANK_END.controller = this;
+        VideoEvents.HBLANK.handler = VideoEvents.HBLANK_HANDLER;
+        VideoEvents.HBLANK_END.handler = VideoEvents.HBLANK_END_HANDLER;
         this.scheduler.schedule(VideoEvents.HBLANK, 960);
     }
     writeIO(address: u32, value: u8): void {
@@ -131,7 +98,6 @@ export class VideoController implements IODevice {
 
         }
 
-        ++this.registers.ly;
 
     }
 
@@ -172,12 +138,42 @@ export class VideoController implements IODevice {
     }
 
     public hblank(s: Scheduler, tardiness: u64): void {
-        this.drawLine();
+        if (this.registers.ly == this.registers.vCountSetting) {
+            this.registers.vCounterFlag = true;
+            if (this.registers.vCounterIRQEnable) {
+                this.interruptManager.requestInterrupt(Interrupts.COUNTERMATCH);
+            }
+        }
+
+        if (this.registers.ly == 160) {
+            this.registers.vBlankFlag = true;
+            if (this.registers.vBlankIRQEnable) {
+                this.interruptManager.requestInterrupt(Interrupts.VBLANK);
+            }
+        } else if (this.registers.ly == 227) {
+            this.registers.vBlankFlag = false;
+        }
+
+        if (this.registers.ly <= 160) {
+            this.drawLine();
+        }
+
+        this.registers.hBlankFlag = true;
+        if (this.registers.ly <= 160 && this.registers.hBlankIRQEnable) {
+            this.interruptManager.requestInterrupt(Interrupts.HBLANK);
+        }
         this.scheduler.schedule(VideoEvents.HBLANK_END, 272 - tardiness);
     }
 
     public hblankEnd(s: Scheduler, tardiness: u64): void {
         this.scheduler.schedule(VideoEvents.HBLANK, 960 - tardiness);
+        this.registers.hBlankFlag = false;
+
+        if (this.registers.ly == 227) {
+            this.registers.ly = 0;
+        } else {
+            ++this.registers.ly;
+        }
     }
 
     public vblankEnd(s: Scheduler, tardiness: u64): void {
