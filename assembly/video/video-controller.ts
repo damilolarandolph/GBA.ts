@@ -1,3 +1,4 @@
+import { callbacks } from "..";
 import { InterruptManager, Interrupts } from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
 import { Scheduler } from "../scheduler";
@@ -170,7 +171,12 @@ export class VideoController implements IODevice {
         this.registers.hBlankFlag = false;
 
         if (this.registers.ly == 227) {
+            // Swap buffers once frame is done
+            let temp = this.readBuffer;
+            this.readBuffer = this.writeBuffer;
+            this.writeBuffer = temp;
             this.registers.ly = 0;
+            callbacks.newFrame();
         } else {
             ++this.registers.ly;
         }
@@ -180,7 +186,7 @@ export class VideoController implements IODevice {
         //do some stuff
     }
 
-    getReadBuffer(): Uint16Array {
+    get currentFrame(): Uint16Array {
         return this.readBuffer;
     }
 
