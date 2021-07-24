@@ -4,8 +4,9 @@
       "binaryFile": "public/wasm/gba.wasm",
       "textFile": "public/wasm/gba.wat",
       "sourceMap": true,
-      "runtime": "minimal",
+      "runtime": "stub",
       "debug": true,
+      "exportRuntime": true,
       "explicitStart": true
     },
     "release": {
@@ -15,7 +16,10 @@
       "optimizeLevel": 3,
       "shrinkLevel": 1,
       "converge": true,
-      "noAssert": false
+      "exportRuntime": true,
+      "noAssert": false,
+      "explicitStart": true,
+      "runtime": "stub"
     },
     "options": {
       "exportRuntime": true,
