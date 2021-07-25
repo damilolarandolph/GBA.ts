@@ -8,7 +8,6 @@
   "private": false,
   "dependencies": {
     "@assemblyscript/loader": "^0.19.3",
-    "comlink": "^4.3.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "regl": "^2.1.0"
@@ -19,7 +18,7 @@
     "dev": "webpack serve",
     "asbuild:watch": "onchange -i 'assembly/**/*' -- yarn asbuild:untouched",
     "asbuild": "yarn asbuild:untouched && yarn asbuild:optimized",
-    "asbuild:test": "asp  --workers 6 --summary",
+    "asbuild:test": "asp  --workers 6 --verbose",
     "asbuild:test:ci": "asp --summary",
     "start": "razzle start",
     "build": "razzle build",
