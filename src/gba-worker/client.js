@@ -1,44 +1,67 @@
-import * as Comlink from 'comlink';
-import { GBAWorker } from './worker';
+import * as loader from '@assemblyscript/loader';
+import { DOMTimeStamp } from 'webidl-conversions';
+import { messages } from './bridge';
 
-export default class GBA {
-    worker;
-    /** @type {GBAWorker} */
-    _gbaWorker;
 
-    /** @type {HTMLCanvasElement} */
-    _canvas;
+export default class ClientEmulatorBridge {
 
-    /** @private */
-    _currentBufferIndex = 1;
 
-    async bootWorker() {
-        this.worker = new Worker(new URL('./worker.js', import.meta.url));
-        let _workerClass = Comlink.wrap(this.worker);
-        this._gbaWorker = await new _workerClass();
-        this._gbaWorker.graphicsController.log();
+    /** @type {Renderer} */
+    renderer = new Renderer();
+
+    #wasmInstance;
+
+    #core;
+
+    #rafId;
+
+    frames = 0;
+    timestamp = 0;
+
+    /** @type {Worker} */
+    #worker;
+
+    constructor() {
+        this.#worker = new Worker(new URL('./worker.js', import.meta.url));
+    }
+
+
+    runFrame() {
+    }
+
+    run() {
+        this.#worker.postMessage({ type: messages.RUN });
+        setInterval(() => { this.#worker.postMessage({ type: messages.PING }) }, 1000);
     }
 
 
     /**
      * 
-     * @param {HTMLCanvasElement} canvasEl 
+     * @param {Uint8Array} buffer 
      */
-    setCanvas(canvasEl) {
-        this._canvas = canvasEl;
+    loadRom(buffer) {
+
+        this.#worker.postMessage({ type: messages.LOAD_ROM, args: [buffer] });
     }
 
+}
 
-    drawCanvas() {
+
+class Renderer {
+
+    #gpu;
+
+    frameNotification() {
 
     }
 
-    swapBuffers() {
-
+    set gpu(wrap) {
+        this.#gpu = wrap;
     }
 
-    get gbaWorker() {
+}
 
-        return this._gbaWorker;
-    }
+
+class Keypad {
+
 }

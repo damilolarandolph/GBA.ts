@@ -1,97 +1,118 @@
-import loader from '@assemblyscript/loader';
-import * as Comlink from 'comlink';
+import * as loader from '@assemblyscript/loader';
+import { colorize } from 'assemblyscript';
+import { MessageListener, messages } from './bridge';
 
 
-var frames = 0;
-var lastFrameTime;
-var time;
-var things = {};
-let wasmInstance;
-
-class GraphicsController {
-
-    log() {
-        console.log('hello');
-    }
-
-}
+export default class Emulator {
 
 
-export class GBAWorker {
+    /** @type {Renderer} */
+    renderer = new Renderer();
 
-    /**@type {GraphicsController} */
-    graphicsController;
+    #wasmInstance;
+
+    #core;
+
+    #rafId;
+
+    frames = 0;
+    timestamp = 0;
+    messageHandler = new MessageListener();
 
     constructor() {
-        this.graphicsController = new GraphicsController();
+        this.boot();
     }
+
+    initHandlers() {
+
+    }
+
+    handleClientMessage(ev) {
+        let type = ev.data.type;
+        let args = ev.data.args ? ev.data.args : [];
+        switch (type) {
+            case messages.LOAD_ROM:
+                this.loadRom(...args);
+                break;
+            case messages.RUN:
+                this.run(...args);
+                break;
+            case messages.PING:
+                console.log('ping received');
+                break;
+
+        }
+    }
+
+    async boot() {
+        let wasmInstance = await loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
+            index: {
+                "console.log": (msg) => { console.log(this.#wasmInstance.exports.__getString(msg)) },
+                "callbacks.newFrame": this.renderer.frameNotification.bind(this.renderer)
+            }
+        })
+        this.#wasmInstance = wasmInstance;
+        this.#wasmInstance.exports._start();
+        this.#core = this.#wasmInstance.exports.GBA.wrap(this.#wasmInstance.exports.gba);
+        this.renderer.gpu = this.#wasmInstance.exports.VideoController.wrap(this.#core.getVideo());
+    }
+
+    runFrame() {
+        this.#rafId = setTimeout(this.runFrame.bind(this));
+        // if (performance.now() - this.timestamp >= 1000) {
+        //     console.log("FPS: ", this.frames);
+        //     this.timestamp = performance.now()
+        //     this.frames = 0;
+        // }
+        this.#core.runFrame();
+        ++this.frames;
+    }
+
+    run() {
+        setInterval(() => {
+            console.log("FPS: ", this.frames);
+            this.frames = 0;
+        }, 1000)
+        this.runFrame();
+    }
+
+
 
     /**
      * 
      * @param {Uint8Array} buffer 
      */
     loadRom(buffer) {
-        let gba = wasmInstance.exports.GBA.wrap(wasmInstance.exports.gba);
-        let cartData = gba.getGamePAK();
-        let view = wasmInstance.exports.__getUint8ArrayView(cartData);
+        let cartData = this.#core.getGamePAK();
+        let view = this.#wasmInstance.exports.__getUint8ArrayView(cartData);
         for (let i = 0; i < buffer.length; ++i) {
             view[i] = buffer[i];
         }
-        gba.run();
-    }
-
-    step() {
-
-    }
-
-    run() {
-
-    }
-
-    stop() {
-
     }
 
 }
 
 
+class Renderer {
 
-Comlink.expose(GBAWorker);
+    #gpu;
 
+    frameNotification() {
 
+    }
 
+    set gpu(wrap) {
+        this.#gpu = wrap;
+    }
 
-
-
-
-(async function () {
-
-
-    wasmInstance = await loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
-        index: {
-            "console.log": (msg) => { console.log(wasmInstance.exports.__getString(msg)) }
-        }
-    })
-
-    wasmInstance.exports._start();
+}
 
 
-})()
+class Keypad {
 
-// loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
-//     index: {
-//         "console.log": (msg) => { console.log(things.wasm.exports.__getString(msg)) }
-//     }
-// }).then((wasm) => {
-//     things.wasm = wasm;
-//     console.log(wasm);
-//     wasm.exports._start();
-//     onmessage = function (e) {
-//         let arry = e.data;
-//         let view = wasm.exports.__getUint8ArrayView(wasm.exports.getCartData());
-//         for (let i = 0; i < arry.length; ++i) {
-//             view[i] = arry[i];
-//         }
-//         wasm.exports.run();
-//     }
-// })
+}
+
+let emulator = new Emulator();
+
+
+self.onmessage = emulator.handleClientMessage.bind(emulator);
