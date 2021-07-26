@@ -6,7 +6,7 @@ import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
 import { armOpTable, opHandler } from './instructions/arm-op-table';
 import { testCondition } from './instructions/instructions';
-import InterruptManager from './interrupt-manager';
+import { InterruptManager } from './interrupt-manager';
 //import { console } from '.././bridge';
 
 export enum CPU_MODES {
@@ -32,6 +32,8 @@ export enum StatusFlags {
 
 export class ARM7CPU {
     private _opQueue: Queue<u32> = new Queue<u32>(10);
+    private _pipeline: StaticArray<u32> = new StaticArray(3);
+    private _pipelineLength: i32 = 0;
     private _memoryMap: SystemMemory;
     private _currentOp: u32 = 0;
     private interuptManager: InterruptManager;
@@ -157,7 +159,7 @@ export class ARM7CPU {
             let index = regNo - 13;
             return this._bankedRegisters.get(mode)[i32(index)];
         }
-        return this._registers[regNo];
+        return unchecked(this._registers[regNo]);
     }
     private writeRegMode(regNo: i32, value: u32, mode: CPU_MODES): void {
 
@@ -173,7 +175,8 @@ export class ARM7CPU {
             this._bankedRegisters.get(mode)[i32(index)] = value;
             return;
         }
-        this._registers[regNo] = value;
+        unchecked(this._registers[regNo] = value);
+        return;
     }
 
     // private logState(): void {

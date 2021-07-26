@@ -3,56 +3,47 @@ export abstract class MemoryMapImpl implements MemoryMap {
 
     protected data: Uint8Array;
     protected addressOffset: u32;
+    protected pointer: usize;
 
     constructor(data: Uint8Array, addressOffset: u32) {
         this.data = data;
         this.addressOffset = addressOffset;
+        this.pointer = changetype<usize>(data.buffer);
     }
 
     read32(address: u32): u32 {
         address -= this.addressOffset;
-        let byte1: u32 = this.data[address];
-        let byte2: u32 = this.data[address + 1];
-        let byte3: u32 = this.data[address + 2];
-        let byte4: u32 = this.data[address + 3]
-        let data: u32 = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
-        return data;
+        let word: u32 = load<u32>(this.pointer + address);
+        return word;
     }
 
     read16(address: u32): u16 {
         address -= this.addressOffset;
-        let byte1: u16 = this.data[address];
-        let byte2: u16 = this.data[address + 1];
-        let data: u16 = (byte2 << 8) | byte1;
-        return data;
+        let halfWord: u16 = load<u16>(this.pointer + address);
+        return halfWord;
     };
 
     read8(address: u32): u8 {
         address -= this.addressOffset;
-        return this.data[address];
+        return load<u8>(this.pointer + address);
     };
 
     write8(address: u32, value: u8): void {
         address -= this.addressOffset;
-        this.data[address] = value;
+        store<u8>(this.pointer + address, value);
+        return;
     }
 
     write16(address: u32, value: u16): void {
         address -= this.addressOffset;
-        this.data[address] = value & 0xff;
-        value >>>= 8
-        this.data[address + 1] = value & 0xff;
+        store<u16>(this.pointer + address, value);
+        return;
     }
 
     write32(address: u32, value: u32): void {
         address -= this.addressOffset;
-        this.data[address] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 1] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 2] = value & 0xff;
-        value >>>= 8;
-        this.data[address + 3] = value & 0xff;
+        store<u32>(this.pointer + address, value);
+        return;
     }
 }
 

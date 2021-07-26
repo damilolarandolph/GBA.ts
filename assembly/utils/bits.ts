@@ -20,10 +20,12 @@ export function setBit(data: u32, bitPos: u32, value: boolean): u32 {
 
 }
 
+@inline
 export function getBit(bits: u32, bitPos: u32): boolean {
     return ((bits >> bitPos) & 0x1) != 0;
 }
 
+@inline
 export function getBits(bits: u32, from: u32, to: u32): u32 {
     if (from == to) {
         return (bits >> to) & 0x1

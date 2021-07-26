@@ -15,7 +15,7 @@ export default class Queue<T>{
             throw new Error("Can't enqueue, queue is full");
         }
         ++this.items;
-        this.data[this.endNeedle] = data;
+        unchecked(this.data[this.endNeedle] = data);
         this.endNeedle = (this.endNeedle + 1) % this.data.length;
     }
 
@@ -24,7 +24,7 @@ export default class Queue<T>{
             throw new Error("Can't dequeue, queue is empty");
         }
         --this.items;
-        let res = this.data[this.startNeedle];
+        let res = unchecked(this.data[this.startNeedle]);
         this.startNeedle = (this.startNeedle + 1) % this.data.length;
         return res;
     }
