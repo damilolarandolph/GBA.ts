@@ -2,12 +2,13 @@ import { callbacks } from "..";
 import { InterruptManager, Interrupts } from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
 import { Scheduler } from "../scheduler";
-import { CompositionMixer } from "./CompositionMixer";
+import { CompositionMixer, CompositionPixel } from "./CompositionMixer";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
 import { VideoEvent, VideoEvents } from "./video-events";
-import { GPURegisters } from "./VideoUnitRegisters";
+import { Dimension, GPURegisters } from "./VideoUnitRegisters";
 import VRAM from "./vram";
+import { console } from "./../index";
 
 
 export enum BGModes {
@@ -27,6 +28,16 @@ export enum BGLayers {
     OBJ,
 }
 
+class Pixel {
+    colour: u16;
+    priority: u16;
+}
+
+
+const bg1Pixel = new Pixel();
+const bg2Pixel = new Pixel();
+const bg3Pixel = new Pixel();
+const objPixel = new Pixel();
 
 export class VideoController implements IODevice {
 
@@ -39,6 +50,8 @@ export class VideoController implements IODevice {
     private readBuffer: Uint16Array = new Uint16Array(38400);
     private composition: CompositionMixer = new CompositionMixer();
     private scheduler: Scheduler;
+    private objWindowDimensions: Dimension = new Dimension();
+
 
 
 
@@ -86,9 +99,9 @@ export class VideoController implements IODevice {
                 this.drawMode3Line();
                 break;
             case BGModes.MODE_4:
-                this.drawMode4Line(BGLayers.BG_2, changetype<usize>(this.composition.BG2));
+                this.drawMode4Line(BGLayers.BG_2, this.composition.BG2);
                 this.composition.mix(
-                    changetype<usize>(this.writeBuffer) + (this.registers.ly * 240),
+                    this.writeBuffer,
                     this.registers,
                     BGLayers.BG_2,
                     BGLayers.BG_2);
@@ -120,9 +133,8 @@ export class VideoController implements IODevice {
     }
 
 
-    private drawMode4Line(layer: BGLayers, buf: usize): void {
+    private drawMode4Line(layer: BGLayers, buf: StaticArray<CompositionPixel>): void {
         let vramPointer = changetype<usize>(this.VRAM.buffer);
-        let palettePointer = changetype<usize>(this.paletteRAM.buffer);
         let currentLine = this.registers.ly;
         // Move pointer to current line
         vramPointer += (currentLine * 240)
@@ -130,7 +142,7 @@ export class VideoController implements IODevice {
         for (let index = 0; index < 240; ++index) {
             let colour = load<u8>(index + <i32>vramPointer);
             let palette = this.paletteRAM.getColour(colour);
-            store<u16>(buf, palette);
+            unchecked(buf[index].colour = palette);
         }
 
     }
@@ -176,7 +188,7 @@ export class VideoController implements IODevice {
             this.readBuffer = this.writeBuffer;
             this.writeBuffer = temp;
             this.registers.ly = 0;
-            callbacks.newFrame();
+            callbacks.newFrame(changetype<usize>(this.readBuffer));
         } else {
             ++this.registers.ly;
         }
