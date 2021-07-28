@@ -2,11 +2,10 @@ import { callbacks } from "..";
 import { InterruptManager, Interrupts } from "../cpu/interrupt-manager";
 import IODevice from "../io/io-device";
 import { Scheduler } from "../scheduler";
-import { CompositionMixer, CompositionPixel } from "./CompositionMixer";
 import { OAM } from "./oam";
 import PaletteRam from "./palette-ram";
 import { VideoEvent, VideoEvents } from "./video-events";
-import { Dimension, GPURegisters } from "./VideoUnitRegisters";
+import { Dimension, GPURegisters, Window } from "./VideoUnitRegisters";
 import VRAM from "./vram";
 import { console } from "./../index";
 
@@ -28,16 +27,31 @@ export enum BGLayers {
     OBJ,
 }
 
-class Pixel {
+export enum WindowLayers {
+    WINDOW_0,
+    WINDOW_1,
+    OBJ,
+    OUT,
+}
+
+
+@unmanaged class Pixel {
     colour: u16;
     priority: u16;
 }
 
 
-const bg1Pixel = new Pixel();
-const bg2Pixel = new Pixel();
-const bg3Pixel = new Pixel();
-const objPixel = new Pixel();
+const layerCache = new StaticArray<usize>(5);
+layerCache[0] = heap.alloc(offsetof<Pixel>() * 240);
+layerCache[1] = heap.alloc(offsetof<Pixel>() * 240);
+layerCache[2] = heap.alloc(offsetof<Pixel>() * 240);
+layerCache[3] = heap.alloc(offsetof<Pixel>() * 240);
+layerCache[4] = heap.alloc(offsetof<Pixel>() * 240);
+changetype<Pixel>(layerCache[0]).colour = 40;
+
+trace("OFFSET SIZE", 2, sizeof<Pixel>(), offsetof<Pixel>())
+trace("NEW COLOUR", 1, changetype<Pixel>(layerCache[0]).colour);
+
 
 export class VideoController implements IODevice {
 
@@ -48,7 +62,6 @@ export class VideoController implements IODevice {
     private interruptManager: InterruptManager;
     private writeBuffer: Uint16Array = new Uint16Array(38400);
     private readBuffer: Uint16Array = new Uint16Array(38400);
-    private composition: CompositionMixer = new CompositionMixer();
     private scheduler: Scheduler;
     private objWindowDimensions: Dimension = new Dimension();
 
@@ -73,6 +86,7 @@ export class VideoController implements IODevice {
         VideoEvents.HBLANK.handler = VideoEvents.HBLANK_HANDLER;
         VideoEvents.HBLANK_END.handler = VideoEvents.HBLANK_END_HANDLER;
         this.scheduler.schedule(VideoEvents.HBLANK, 960);
+
     }
     writeIO(address: u32, value: u8): void {
         address &= 0x3FFFFFF;
@@ -99,10 +113,8 @@ export class VideoController implements IODevice {
                 this.drawMode3Line();
                 break;
             case BGModes.MODE_4:
-                this.drawMode4Line(BGLayers.BG_2, this.composition.BG2);
-                this.composition.mix(
-                    this.writeBuffer,
-                    this.registers,
+                this.drawMode4Line(BGLayers.BG_2, layerCache[2]);
+                this.mixLayers(
                     BGLayers.BG_2,
                     BGLayers.BG_2);
                 break;
@@ -113,6 +125,65 @@ export class VideoController implements IODevice {
         }
 
 
+    }
+
+    private mixLayers(layerStart: BGLayers, layerEnd: BGLayers): void {
+        for (let index = 0; index < 240; ++index) {
+            let topLayer: BGLayers = -1;
+            let topCompPixel: Pixel | null = null;
+            //let spritePixel = unchecked(this.OBJ[index]);
+            let window: Window | null = null;
+            let regs = this.registers;
+            let currentLine = regs.ly;
+
+            for (let index = 0; index < WindowLayers.OUT; ++index) {
+                if (!regs.isWindow(index)) {
+                    continue;
+                }
+                if (window == null) {
+                    window = regs.win[WindowLayers.OUT];
+                }
+                if (regs.win[index].dimensions.containsPoint(index, currentLine)) {
+                    window = regs.win[index];
+                    break;
+                }
+            }
+
+
+
+
+            for (let layerIndex = layerStart; layerIndex <= layerEnd; ++layerIndex) {
+
+                let newTop = changetype<Pixel>(layerCache[layerIndex] + (240 * index));
+
+                if (!regs.isBG(layerIndex))
+                    continue;
+
+                if (window != null && (!window.isBG(layerIndex))
+                ) {
+                    continue;
+                }
+
+
+                if (topCompPixel) {
+                    if (topCompPixel.colour == 0 || topCompPixel.priority > newTop.priority) {
+                        topCompPixel = newTop;
+                        topLayer = layerIndex;
+                    }
+                } else {
+                    topCompPixel = newTop;
+                    topLayer = layerIndex;
+                }
+            }
+
+            // Can no pixel be found ? 
+            unchecked(this.writeBuffer[index] = topCompPixel ? topCompPixel.colour : 0);
+        }
+    }
+
+    @inline
+    private intersects(x: u32, y: u32, dimension: Dimension): boolean {
+        return (x >= dimension.leftX && x <= dimension.rightX) && (y >= dimension.topY && y <= dimension.bottomY);
     }
 
     private drawMode0Line(): void {
@@ -133,16 +204,18 @@ export class VideoController implements IODevice {
     }
 
 
-    private drawMode4Line(layer: BGLayers, buf: StaticArray<CompositionPixel>): void {
+    private drawMode4Line(layer: BGLayers, pixelLinePointer: usize): void {
         let vramPointer = changetype<usize>(this.VRAM.buffer);
         let currentLine = this.registers.ly;
         // Move pointer to current line
         vramPointer += (currentLine * 240)
 
         for (let index = 0; index < 240; ++index) {
+            pixelLinePointer += (index * 240);
+            let pixel: Pixel = changetype<Pixel>(pixelLinePointer);
             let colour = load<u8>(index + <i32>vramPointer);
             let palette = this.paletteRAM.getColour(colour);
-            unchecked(buf[index].colour = palette);
+            pixel.colour = palette;
         }
 
     }
