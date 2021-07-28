@@ -1,12 +1,19 @@
 import { getBit, getBits, setBit } from "../utils/bits";
+import { BGLayers, WindowLayers } from "./video-controller";
 
 
 @unmanaged
 export class Dimension {
-    rightX: u8 = 0;
-    leftX: u8 = 0;
-    topY: u8 = 0;
-    bottomY: u8 = 0;
+    rightX: u32 = 0;
+    leftX: u32 = 0;
+    topY: u32 = 0;
+    bottomY: u32 = 0;
+
+    public containsPoint(x: u32, y: u32): boolean {
+
+        return (x >= this.leftX && x <= this.rightX) && (y >= this.topY && y <= this.bottomY);
+
+    }
 };
 
 enum IORegions {
@@ -80,6 +87,20 @@ export class Window {
     effectsEnable: boolean = false;
     dimensions: Dimension = new Dimension();
 
+    isBG(layer: u32): boolean {
+        switch (layer) {
+            case BGLayers.BG_0:
+                return this.bg0Enable;
+            case BGLayers.BG_1:
+                return this.bg1Enable;
+            case BGLayers.BG_2:
+                return this.bg2Enable;
+            case BGLayers.BG_3:
+                return this.bg3Enable;
+        }
+        return false;
+    }
+
     write(value: u8): void {
         this.bg0Enable = getBit(value, 0);
         this.bg1Enable = getBit(value, 1);
@@ -110,14 +131,27 @@ export class GPURegisters {
     hBlankIntervalFree: boolean = false;
     objMap1D: boolean = false;
     forcedBlank: boolean = false;
-    bg0Enable: boolean = false;
-    bg1Enable: boolean = false;
-    bg2Enable: boolean = false;
-    bg3Enable: boolean = false;
+    private bg0Enable: boolean = false;
+    private bg1Enable: boolean = false;
+    private bg2Enable: boolean = false;
+    private bg3Enable: boolean = false;
     objEnable: boolean = false;
-    window0Enable: boolean = false;
-    window1Enable: boolean = false;
-    objWindowEnable: boolean = false;
+    private window0Enable: boolean = false;
+    private window1Enable: boolean = false;
+    private objWindowEnable: boolean = false;
+    bg: StaticArray<BGCNT> = new StaticArray(4);
+    win: StaticArray<Window> = new StaticArray(4);
+
+    constructor() {
+        this.bg[0] = this.bg0;
+        this.bg[1] = this.bg1;
+        this.bg[2] = this.bg2;
+        this.bg[3] = this.bg3;
+        this.win[0] = this.win0;
+        this.win[1] = this.win1;
+        this.win[2] = this.objWin;
+        this.win[3] = this.winOut;
+    }
 
 
     // DISPSTAT
@@ -132,18 +166,44 @@ export class GPURegisters {
 
 
     // BG CONTROLS
-    bg0: BGCNT = new BGCNT();
-    bg1: BGCNT = new BGCNT();
-    bg2: BGCNT = new BGCNT();
-    bg3: BGCNT = new BGCNT();
+    private bg0: BGCNT = new BGCNT();
+    private bg1: BGCNT = new BGCNT();
+    private bg2: BGCNT = new BGCNT();
+    private bg3: BGCNT = new BGCNT();
 
 
     // Window Controls
-    win0: Window = new Window();
-    win1: Window = new Window();
-    objWin: Window = new Window();
-    winOut: Window = new Window();
+    private win0: Window = new Window();
+    private win1: Window = new Window();
+    private objWin: Window = new Window();
+    private winOut: Window = new Window();
 
+    isWindow(windowLayer: WindowLayers): boolean {
+        switch (windowLayer) {
+            case WindowLayers.WINDOW_0:
+                return this.window0Enable;
+            case WindowLayers.WINDOW_1:
+                return this.window1Enable;
+            case WindowLayers.OBJ:
+                return this.objWindowEnable;
+        }
+        return false;
+    }
+
+    isBG(layer: BGLayers): boolean {
+        switch (layer) {
+            case BGLayers.BG_0:
+                return this.bg0Enable;
+            case BGLayers.BG_1:
+                return this.bg1Enable;
+            case BGLayers.BG_2:
+                return this.bg2Enable;
+            case BGLayers.BG_3:
+                return this.bg3Enable;
+        }
+
+        return false;
+    }
 
 
 
