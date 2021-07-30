@@ -60,8 +60,8 @@ export class VideoController implements IODevice {
     public paletteRAM: PaletteRam;
     private registers: GPURegisters;
     private interruptManager: InterruptManager;
-    private writeBuffer: Uint16Array = new Uint16Array(38400);
-    private readBuffer: Uint16Array = new Uint16Array(38400);
+    private writeBuffer: Uint8ClampedArray = new Uint8ClampedArray(153600);
+    private readBuffer: Uint8ClampedArray = new Uint8ClampedArray(153600);
     private scheduler: Scheduler;
     private objWindowDimensions: Dimension = new Dimension();
 
@@ -128,33 +128,32 @@ export class VideoController implements IODevice {
     }
 
     private mixLayers(layerStart: BGLayers, layerEnd: BGLayers): void {
+
+        let regs = this.registers;
+        let currentLine = regs.ly;
+        let bufStart = (u32(currentLine) * 160) * 4;
         for (let index = 0; index < 240; ++index) {
             let topLayer: BGLayers = -1;
             let topCompPixel: Pixel | null = null;
             //let spritePixel = unchecked(this.OBJ[index]);
             let window: Window | null = null;
-            let regs = this.registers;
-            let currentLine = regs.ly;
 
-            for (let index = 0; index < WindowLayers.OUT; ++index) {
-                if (!regs.isWindow(index)) {
+            for (let win = 0; win < WindowLayers.OUT; ++win) {
+                if (!regs.isWindow(win)) {
                     continue;
                 }
                 if (window == null) {
                     window = regs.win[WindowLayers.OUT];
                 }
-                if (regs.win[index].dimensions.containsPoint(index, currentLine)) {
-                    window = regs.win[index];
+                if (regs.win[win].dimensions.containsPoint(index, currentLine)) {
+                    window = regs.win[win];
                     break;
                 }
             }
 
-
-
-
             for (let layerIndex = layerStart; layerIndex <= layerEnd; ++layerIndex) {
 
-                let newTop = changetype<Pixel>(layerCache[layerIndex] + (240 * index));
+                let newTop = changetype<Pixel>(layerCache[layerIndex] + (index * offsetof<Pixel>()));
 
                 if (!regs.isBG(layerIndex))
                     continue;
@@ -177,14 +176,23 @@ export class VideoController implements IODevice {
             }
 
             // Can no pixel be found ? 
-            unchecked(this.writeBuffer[index] = topCompPixel ? topCompPixel.colour : 0);
+            let rgbaStride: u32 = bufStart + (index * 4);
+            // trace("LINE", 1, currentLine);
+            let colour = topCompPixel ? topCompPixel.colour : 0;
+            //   trace("Stride BufStart", 3, rgbaStride, bufStart, (index * 4) + bufStart);
+            //trace("Colour", 1, colour);
+
+            // Red
+            this.writeBuffer[rgbaStride] = u8(colour & 0x1f);
+            // Green
+            this.writeBuffer[rgbaStride + 1] = u8((colour >>> 5) & 0x1f);
+            // Blue
+            this.writeBuffer[rgbaStride + 2] = u8((colour >>> 10) & 0x1f);
+            //Alpha (Full Transparency)
+            this.writeBuffer[rgbaStride + 3] = 255;
         }
     }
 
-    @inline
-    private intersects(x: u32, y: u32, dimension: Dimension): boolean {
-        return (x >= dimension.leftX && x <= dimension.rightX) && (y >= dimension.topY && y <= dimension.bottomY);
-    }
 
     private drawMode0Line(): void {
 
@@ -211,10 +219,13 @@ export class VideoController implements IODevice {
         vramPointer += (currentLine * 240)
 
         for (let index = 0; index < 240; ++index) {
-            pixelLinePointer += (index * 240);
-            let pixel: Pixel = changetype<Pixel>(pixelLinePointer);
+            let pixelPointer = pixelLinePointer + (index * offsetof<Pixel>());
+            let pixel: Pixel = changetype<Pixel>(pixelPointer);
             let colour = load<u8>(index + <i32>vramPointer);
             let palette = this.paletteRAM.getColour(colour);
+            // if (palette != 0) {
+            //     trace("Palette", 1, palette)
+            // }
             pixel.colour = palette;
         }
 
@@ -240,12 +251,12 @@ export class VideoController implements IODevice {
             this.registers.vBlankFlag = false;
         }
 
-        if (this.registers.ly <= 160) {
+        if (this.registers.ly < 160) {
             this.drawLine();
         }
 
         this.registers.hBlankFlag = true;
-        if (this.registers.ly <= 160 && this.registers.hBlankIRQEnable) {
+        if (this.registers.ly < 160 && this.registers.hBlankIRQEnable) {
             this.interruptManager.requestInterrupt(Interrupts.HBLANK);
         }
         this.scheduler.schedule(VideoEvents.HBLANK_END, 272 - tardiness);
@@ -262,6 +273,7 @@ export class VideoController implements IODevice {
             this.writeBuffer = temp;
             this.registers.ly = 0;
             callbacks.newFrame(changetype<usize>(this.readBuffer));
+            //  trace("Is scheduling", 1, f32(this.scheduler.timeStamp <= 280896))
         } else {
             ++this.registers.ly;
         }
@@ -271,7 +283,7 @@ export class VideoController implements IODevice {
         //do some stuff
     }
 
-    get currentFrame(): Uint16Array {
+    get currentFrame(): Uint8ClampedArray {
         return this.readBuffer;
     }
 
