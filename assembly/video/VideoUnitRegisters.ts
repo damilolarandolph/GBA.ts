@@ -162,7 +162,7 @@ export class GPURegisters {
     hBlankIRQEnable: boolean = false;
     vCounterIRQEnable: boolean = false;
     vCountSetting: u8 = 0;
-    ly: u8 = 0;
+    ly: u32 = 0;
 
 
     // BG CONTROLS
@@ -354,7 +354,7 @@ export class GPURegisters {
                 result = this.vCountSetting;
                 break;
             case IORegions.DISPSTAT + 2:
-                result = this.ly;
+                result = <u8>this.ly;
                 break;
             case IORegions.BG0CNT:
                 result = this.bg0.readCNT(1);

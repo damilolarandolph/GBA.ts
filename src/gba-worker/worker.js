@@ -6,18 +6,20 @@ import { MessageListener, messages } from './bridge';
 export default class Emulator {
 
 
-    /** @type {Renderer} */
-    renderer = new Renderer();
 
     #wasmInstance;
 
     #core;
+    #gpu;
 
     #rafId;
+    #canvas;
 
     frames = 0;
     timestamp = 0;
     messageHandler = new MessageListener();
+    readBuffer = new Uint8ClampedArray()
+
 
     constructor() {
         this.boot();
@@ -40,21 +42,31 @@ export default class Emulator {
             case messages.PING:
                 console.log('ping received');
                 break;
-
         }
+    }
+
+    frameNotification(arrayPointer) {
+        //console.log(arrayPointer);
+        // console.log(this.#wasmInstance.exports);
+        let array = this.#wasmInstance.exports.__getUint8ClampedArray(arrayPointer);
+
+        ++this.frames;
+        self.postMessage({ type: messages.FRAME_UPDATE, args: [array] });
     }
 
     async boot() {
         let wasmInstance = await loader.instantiateStreaming(fetch("/wasm/gba.wasm"), {
             index: {
                 "console.log": (msg) => { console.log(this.#wasmInstance.exports.__getString(msg)) },
-                "callbacks.newFrame": this.renderer.frameNotification.bind(this.renderer)
+                "callbacks.newFrame": this.frameNotification.bind(this)
             }
         })
         this.#wasmInstance = wasmInstance;
         this.#wasmInstance.exports._start();
         this.#core = this.#wasmInstance.exports.GBA.wrap(this.#wasmInstance.exports.gba);
-        this.renderer.gpu = this.#wasmInstance.exports.VideoController.wrap(this.#core.getVideo());
+        this.#gpu = this.#wasmInstance.exports.VideoController.wrap(this.#core.getVideo());
+
+        console.log(this.#wasmInstance.exports);
     }
 
     runFrame() {
@@ -65,7 +77,7 @@ export default class Emulator {
         //     this.frames = 0;
         // }
         this.#core.runFrame();
-        ++this.frames;
+        //  this.sendFrameNotifcation();
     }
 
     run() {
@@ -74,6 +86,12 @@ export default class Emulator {
             this.frames = 0;
         }, 1000)
         this.runFrame();
+    }
+
+
+
+    sendFrameNotifcation() {
+        self.postMessage({ type: messages.FRAME_UPDATE });
     }
 
 
@@ -93,19 +111,6 @@ export default class Emulator {
 }
 
 
-class Renderer {
-
-    #gpu;
-
-    frameNotification() {
-
-    }
-
-    set gpu(wrap) {
-        this.#gpu = wrap;
-    }
-
-}
 
 
 class Keypad {

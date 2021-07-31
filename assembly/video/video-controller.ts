@@ -7,7 +7,7 @@ import PaletteRam from "./palette-ram";
 import { VideoEvent, VideoEvents } from "./video-events";
 import { Dimension, GPURegisters, Window } from "./VideoUnitRegisters";
 import VRAM from "./vram";
-import { console } from "./../index";
+import { console } from "../index";
 
 
 export enum BGModes {
@@ -47,10 +47,10 @@ layerCache[1] = heap.alloc(offsetof<Pixel>() * 240);
 layerCache[2] = heap.alloc(offsetof<Pixel>() * 240);
 layerCache[3] = heap.alloc(offsetof<Pixel>() * 240);
 layerCache[4] = heap.alloc(offsetof<Pixel>() * 240);
-changetype<Pixel>(layerCache[0]).colour = 40;
+//changetype<Pixel>(layerCache[0]).colour = 40;
 
-trace("OFFSET SIZE", 2, sizeof<Pixel>(), offsetof<Pixel>())
-trace("NEW COLOUR", 1, changetype<Pixel>(layerCache[0]).colour);
+//race("OFFSET SIZE", 2, sizeof<Pixel>(), offsetof<Pixel>())
+//trace("NEW COLOUR", 1, changetype<Pixel>(layerCache[0]).colour);
 
 
 export class VideoController implements IODevice {
@@ -86,6 +86,8 @@ export class VideoController implements IODevice {
         VideoEvents.HBLANK.handler = VideoEvents.HBLANK_HANDLER;
         VideoEvents.HBLANK_END.handler = VideoEvents.HBLANK_END_HANDLER;
         this.scheduler.schedule(VideoEvents.HBLANK, 960);
+        trace("VRAM POINTER", 1, changetype<usize>(this.VRAM.buffer));
+        trace("PALETTE POINTER", 1, changetype<usize>(this.paletteRAM.buffer));
 
     }
     writeIO(address: u32, value: u8): void {
@@ -127,6 +129,7 @@ export class VideoController implements IODevice {
 
     }
 
+
     private mixLayers(layerStart: BGLayers, layerEnd: BGLayers): void {
 
         let regs = this.registers;
@@ -135,7 +138,6 @@ export class VideoController implements IODevice {
         for (let index = 0; index < 240; ++index) {
             let topLayer: BGLayers = -1;
             let topCompPixel: Pixel | null = null;
-            //let spritePixel = unchecked(this.OBJ[index]);
             let window: Window | null = null;
 
             for (let win = 0; win < WindowLayers.OUT; ++win) {
@@ -177,17 +179,20 @@ export class VideoController implements IODevice {
 
             // Can no pixel be found ? 
             let rgbaStride: u32 = bufStart + (index * 4);
-            // trace("LINE", 1, currentLine);
             let colour = topCompPixel ? topCompPixel.colour : 0;
-            //   trace("Stride BufStart", 3, rgbaStride, bufStart, (index * 4) + bufStart);
-            //trace("Colour", 1, colour);
 
             // Red
-            this.writeBuffer[rgbaStride] = u8(colour & 0x1f);
+            let red = ((colour & 0x1f) % 32) * 8;
+            this.writeBuffer[rgbaStride] = red;
+
             // Green
-            this.writeBuffer[rgbaStride + 1] = u8((colour >>> 5) & 0x1f);
+            let green = (((colour >>> 5) & 0x1f) % 32) * 8;
+            this.writeBuffer[rgbaStride + 1] = green;
+
             // Blue
-            this.writeBuffer[rgbaStride + 2] = u8((colour >>> 10) & 0x1f);
+            let blue = (((colour >>> 10) & 0x1f) % 32) * 8;
+            this.writeBuffer[rgbaStride + 2] = blue;
+
             //Alpha (Full Transparency)
             this.writeBuffer[rgbaStride + 3] = 255;
         }
@@ -213,20 +218,14 @@ export class VideoController implements IODevice {
 
 
     private drawMode4Line(layer: BGLayers, pixelLinePointer: usize): void {
-        let vramPointer = changetype<usize>(this.VRAM.buffer);
         let currentLine = this.registers.ly;
-        // Move pointer to current line
-        vramPointer += (currentLine * 240)
-
+        let vramPointer = currentLine * 160;
         for (let index = 0; index < 240; ++index) {
             let pixelPointer = pixelLinePointer + (index * offsetof<Pixel>());
             let pixel: Pixel = changetype<Pixel>(pixelPointer);
-            let colour = load<u8>(index + <i32>vramPointer);
-            let palette = this.paletteRAM.getColour(colour);
-            // if (palette != 0) {
-            //     trace("Palette", 1, palette)
-            // }
-            pixel.colour = palette;
+            let palette = this.VRAM.store[vramPointer + index];
+            let colour = this.paletteRAM.getColour(<u32>palette);
+            pixel.colour = colour;
         }
 
     }
@@ -273,7 +272,6 @@ export class VideoController implements IODevice {
             this.writeBuffer = temp;
             this.registers.ly = 0;
             callbacks.newFrame(changetype<usize>(this.readBuffer));
-            //  trace("Is scheduling", 1, f32(this.scheduler.timeStamp <= 280896))
         } else {
             ++this.registers.ly;
         }

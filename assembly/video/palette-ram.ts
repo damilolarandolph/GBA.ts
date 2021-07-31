@@ -13,8 +13,8 @@ export default class PaletteRam extends MemoryMapImpl {
         return this.data;
     }
 
-    getColour(index: u8): u16 {
-        let ptr = changetype<usize>(this.data);
+    getColour(index: u32): u16 {
+        let ptr = changetype<usize>(this.data.buffer);
         ptr += (index * 2);
         return load<u16>(ptr);
     }

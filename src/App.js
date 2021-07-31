@@ -8,6 +8,7 @@ const App = () => {
 
     React.useEffect(() => {
         const gba = new ClientEmulatorBridge();
+        gba.renderer.canvas = ref.current;
         setGBA(gba);
     }, []);
 
@@ -35,7 +36,7 @@ const App = () => {
 function useCanvas() {
     let ref = useRef();
     return {
-        canvas: <canvas ref={ref} style={{ width: '240px', height: '160px' }}>
+        canvas: <canvas ref={ref} style={{ width: `${240 * 3}px`, height: `${160 * 3}px` }}>
 
         </canvas>, ref
     }

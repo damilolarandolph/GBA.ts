@@ -12,7 +12,11 @@ export default class VRAM extends MemoryMapImpl {
     };
 
 
-    get buffer(): Uint8Array {
+    get buffer(): ArrayBuffer {
+        return this.data.buffer;
+    }
+
+    get store(): Uint8Array {
         return this.data;
     }
 

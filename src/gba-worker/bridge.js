@@ -8,6 +8,11 @@ export const messages = Object.freeze({
     EMULATOR_READY: 'emulator ready',
     PING: 'ping',
     RUN: 'play',
+    GET_LATEST_FRAME: 'get_latest_frame',
+    LATEST_FRAME_RESULT: 'latest_frame_result',
+
+
+    SCALE_FRAME: 'scale_frame',
 });
 
 export class MessageListener {
