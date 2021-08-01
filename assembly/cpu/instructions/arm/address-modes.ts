@@ -15,7 +15,7 @@ export function dataProcImmediate(instruction: u32, cpu: ARM7CPU): ShifterOutput
     let immed8 = u32(getBits(instruction, 7, 0));
     let rotateAmount = u32(getBits(instruction, 11, 8));
     return rotateRight(immed8, rotateAmount * 2, cpu);
-} 0xFFFFFFFC
+}
 
 export function dataProcRegister(cpu: ARM7CPU): ShifterOutput {
     let instruction = cpu.currentInstruction;
