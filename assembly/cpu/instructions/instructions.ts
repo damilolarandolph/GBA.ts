@@ -6,7 +6,12 @@ import { ARM7CPU, StatusFlags } from '../cpu';
 
 export function testCondition(cpu: ARM7CPU): boolean {
     let instruction = cpu.currentInstruction;
-    let opcode = getBits(instruction, 31, 28);
+    let opcode: u32;
+    if (cpu.isFlag(StatusFlags.THUMB_MODE)) {
+        opcode = getBits(instruction, 11, 8);
+    } else {
+        opcode = getBits(instruction, 31, 28);
+    }
     switch (opcode) {
         case 0x0:
             return cpu.isFlag(StatusFlags.ZERO);
