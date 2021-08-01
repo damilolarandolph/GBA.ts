@@ -5,20 +5,17 @@ import { testCondition } from "../instructions";
 import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, rori, rorr, rotateRight, ShifterOutput, } from "./address-modes";
 
 
-
-function carryFrom(lhs: u32, rhs: u32): boolean {
+export function carryFrom(lhs: u32, rhs: u32): boolean {
     return rhs > ((u32(0xffffffff)) - lhs);
 }
 
-function isNegative(val: u32): boolean {
+export function isNegative(val: u32): boolean {
     return getBit(val, 31);
 }
-
-function underflowFrom(lhs: u32, rhs: u32): boolean {
+export function underflowFrom(lhs: u32, rhs: u32): boolean {
     return rhs > lhs;
 }
-
-function signOverflowFrom(lhs: u32, rhs: u32): boolean {
+export function signOverflowFrom(lhs: u32, rhs: u32): boolean {
     let signedLhs = i32(lhs);
     let signedRhs = i32(rhs);
     let result = signedLhs + signedRhs;
@@ -207,7 +204,8 @@ export function CMP(cpu: ARM7CPU): void {
 
 }
 
-function subSignOverflow(lhs: i32, rhs: i32): boolean {
+@inline
+export function subSignOverflow(lhs: i32, rhs: i32): boolean {
     /**
      *  If 2 Two's Complement numbers are subtracted, 
      * and their signs are different, 
