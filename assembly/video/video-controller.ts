@@ -145,17 +145,17 @@ export class VideoController implements IODevice {
                     continue;
                 }
                 if (window == null) {
-                    window = regs.win[WindowLayers.OUT];
+                    window = unchecked(regs.win[WindowLayers.OUT]);
                 }
-                if (regs.win[win].dimensions.containsPoint(index, currentLine)) {
-                    window = regs.win[win];
+                if (unchecked(regs.win[win].dimensions.containsPoint(index, currentLine))) {
+                    window = unchecked(regs.win[win]);
                     break;
                 }
             }
 
             for (let layerIndex = layerStart; layerIndex <= layerEnd; ++layerIndex) {
 
-                let newTop = changetype<Pixel>(layerCache[layerIndex] + (index * offsetof<Pixel>()));
+                let newTop = changetype<Pixel>(unchecked(layerCache[layerIndex]) + (index * offsetof<Pixel>()));
 
                 if (!regs.isBG(layerIndex))
                     continue;
@@ -183,18 +183,18 @@ export class VideoController implements IODevice {
 
             // Red
             let red = ((colour & 0x1f) % 32) * 8;
-            this.writeBuffer[rgbaStride] = red;
+            unchecked(this.writeBuffer[rgbaStride] = red);
 
             // Green
             let green = (((colour >>> 5) & 0x1f) % 32) * 8;
-            this.writeBuffer[rgbaStride + 1] = green;
+            unchecked(this.writeBuffer[rgbaStride + 1] = green);
 
             // Blue
             let blue = (((colour >>> 10) & 0x1f) % 32) * 8;
-            this.writeBuffer[rgbaStride + 2] = blue;
+            unchecked(this.writeBuffer[rgbaStride + 2] = blue);
 
             //Alpha (Full Transparency)
-            this.writeBuffer[rgbaStride + 3] = 255;
+            unchecked(this.writeBuffer[rgbaStride + 3] = 255);
         }
     }
 
@@ -227,7 +227,6 @@ export class VideoController implements IODevice {
             let colour = this.paletteRAM.getColour(<u32>palette);
             pixel.colour = colour;
         }
-
     }
     private drawMode5Line(): void {
 
