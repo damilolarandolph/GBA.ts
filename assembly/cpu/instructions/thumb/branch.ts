@@ -4,7 +4,7 @@ import { ARM7CPU, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 
 
-export function branchConditinal(cpu: ARM7CPU) {
+export function BC(cpu: ARM7CPU) {
 
     if (!testCondition(cpu)) {
         cpu.addCycles(1);
@@ -29,7 +29,7 @@ export function branchConditinal(cpu: ARM7CPU) {
 }
 
 
-export function branchUnconditional(cpu: ARM7CPU) {
+export function B(cpu: ARM7CPU) {
     let instruction = cpu.currentInstruction;
     let targetAddr: u32 = instruction & 0x7FF;
 
@@ -70,7 +70,8 @@ export function BLBLX(cpu: ARM7CPU) {
 
 export function BX(cpu: ARM7CPU) {
     let instruction = cpu.currentInstruction;
-    let rm = (instruction >> 3) & 0x7;
+    let h2Bit = (instruction >>> 6) & 0x1;
+    let rm = (h2Bit << 4) | ((instruction >> 3) & 0x7);
     let rmVal = cpu.readRegister(rm);
     cpu.setFlag(StatusFlags.THUMB_MODE, (rmVal & 0x1) != 0);
     cpu.writeRegister(15, rmVal & 0xFFFFFFFE);
