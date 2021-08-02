@@ -87,7 +87,9 @@ export function LDM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 15, 0);
 
+    cpu.addCycles(1);
     let currentAddress = multiAddrOutput.startAddress;
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
             let readValue = cpu.read32(currentAddress);
@@ -97,7 +99,8 @@ export function LDM(cpu: ARM7CPU): void {
     }
 
     if (getBit(regList, 15)) {
-        cpu.PC = cpu.read32(currentAddress) & 0xFFFFFFFC;
+
+        cpu.writeRegister(15, cpu.read32(currentAddress) & 0xFFFFFFFC);
         currentAddress += 4;
     }
     assert(multiAddrOutput.endAddress == currentAddress - 4);
@@ -168,9 +171,9 @@ export function LDM3(cpu: ARM7CPU): void {
     cpu.CPSR = cpu.SPSR;
     let pcVal = cpu.read32(currentAddress);
     if (cpu.isFlag(StatusFlags.THUMB_MODE)) {
-        cpu.PC = pcVal & 0xFFFFFFFE;
+        cpu.writeRegister(15, pcVal & 0xFFFFFFFE);
     } else {
-        cpu.PC = pcVal & 0xFFFFFFFC;
+        cpu.writeRegister(15, pcVal & 0xFFFFFFFC);
     }
 }
 
@@ -182,7 +185,7 @@ export function LDR(cpu: ARM7CPU): void {
     let shifterOutput = rotateRight(cpu.read32(addr), 8 * lastBits, cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (rd == 15) {
-        cpu.PC = shifterOutput.operand & 0xFFFFFFFE;
+        cpu.writeRegister(15, shifterOutput.operand & 0xFFFFFFFE);
         cpu.setFlag(StatusFlags.THUMB_MODE, (shifterOutput.operand & 0x1) == 1);
     } else {
         cpu.writeRegister(rd, shifterOutput.operand);
@@ -218,7 +221,7 @@ export function LDRT(cpu: ARM7CPU): void {
     let shifterOutput = rotateRight(cpu.read32(addr), 8 * lastBits, cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (rd == 15) {
-        cpu.PC = shifterOutput.operand;
+        cpu.writeRegister(15, shifterOutput.operand);
     } else {
         cpu.writeRegister(rd, shifterOutput.operand);
     }
