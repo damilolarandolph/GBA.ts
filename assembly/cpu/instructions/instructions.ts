@@ -2,6 +2,7 @@ import { getBits } from '../../utils/bits';
 import { ARM7CPU, StatusFlags } from '../cpu';
 
 
+export type opHandler = (cpu: ARM7CPU) => void;
 
 
 export function testCondition(cpu: ARM7CPU): boolean {

@@ -1,7 +1,7 @@
 
 import { ARM7CPU } from '../cpu';
 import * as arm from './arm/arm';
-export type opHandler = (cpu: ARM7CPU) => void;
+import { opHandler } from "./instructions";
 
 export const armOpTable:  StaticArray<StaticArray<opHandler | null>> = [
 

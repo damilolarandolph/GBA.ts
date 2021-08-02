@@ -4,8 +4,8 @@ import { Timing } from '../memory/timings-map';
 import { Scheduler } from '../scheduler';
 import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
-import { armOpTable, opHandler } from './instructions/arm-op-table';
-import { testCondition } from './instructions/instructions';
+import { armOpTable } from './instructions/arm-op-table';
+import { testCondition, opHandler } from './instructions/instructions';
 import { InterruptManager } from './interrupt-manager';
 //import { console } from '.././bridge';
 
