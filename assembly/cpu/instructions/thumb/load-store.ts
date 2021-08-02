@@ -1,11 +1,6 @@
 import { Timing } from "../../../memory/timings-map";
-import { signExtend } from "../../../utils/bits";
+import { countSetBits, signExtend } from "../../../utils/bits";
 import { ARM7CPU } from "../../cpu";
-
-
-@unmanaged class FormatResult {
-
-}
 
 
 
@@ -171,5 +166,107 @@ export function STRSHB(cpu: ARM7CPU): void {
     } else {
         cpu.write16(address, cpu.readRegister(destination) & 0xffff);
     }
+}
+
+
+export function LDMIA(cpu: ARM7CPU): void {
+    let instruction = cpu.currentInstruction;
+    let rn = (instruction >>> 8) & 0x7;
+    let regList = instruction & 0xff;
+    let startAddr = cpu.readRegister(rn);
+    let endAddr = startAddr + (countSetBits(regList) * 4) - 4;
+    let addr = startAddr;
+
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
+    for (let reg = 0; reg < 8; ++reg) {
+        if ((regList & 0x1) != 0) {
+            cpu.writeRegister(reg, cpu.read32(addr));
+            addr += 4;
+            cpu.accessType = Timing.Access.SEQUENTIAL;
+        }
+        regList = regList >>> 1;
+    }
+
+    assert(endAddr == addr - 4);
+    cpu.writeRegister(rn, endAddr + 4);
+
+}
+
+export function POP(cpu: ARM7CPU): void {
+    let instruction = cpu.currentInstruction;
+    let startAddr = cpu.readRegister(13);
+    let rBit = (instruction >>> 8) & 0x1;
+    let regList = instruction & 0xff;
+    let endAddr = startAddr + 4 * (rBit + countSetBits(regList));
+    let addr = startAddr;
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
+
+    for (let reg = 0; reg < 8; ++reg) {
+        if ((regList & 0x1) != 0) {
+            cpu.writeRegister(reg, cpu.read32(addr));
+            addr += 4;
+            cpu.accessType = Timing.Access.SEQUENTIAL;
+        }
+        regList = regList >>> 1;
+    }
+
+    if (rBit != 0) {
+        let value = cpu.read32(addr);
+        cpu.writeRegister(15, value & 0xFFFFFFFE);
+        addr += 4;
+    }
+
+    assert(endAddr == addr);
+    cpu.writeRegister(13, endAddr);
+
+}
+
+export function PUSH(cpu: ARM7CPU): void {
+    let instruction = cpu.currentInstruction;
+    let rBit = (instruction >>> 8) & 0x1;
+    let regList = instruction & 0xff;
+    let sp = cpu.readRegister(13)
+    let startAddr = sp - 4 * (rBit + countSetBits(regList));
+    let endAddr = sp - 4;
+    let addr = startAddr;
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
+    for (let reg = 0; reg < 8; ++reg) {
+        if ((regList & 0x1) != 0) {
+            cpu.write32(addr, reg);
+            addr += 4;
+            cpu.accessType = Timing.Access.SEQUENTIAL;
+        }
+        regList = regList >>> 1;
+    }
+
+    if (rBit != 0) {
+        cpu.write32(addr, cpu.readRegister(14));
+        addr += 4;
+    }
+
+    assert(endAddr == (addr - 4));
+    cpu.writeRegister(13, startAddr);
+}
+
+
+export function STMIA(cpu: ARM7CPU): void {
+    let instruction = cpu.currentInstruction;
+    let rn = (instruction >>> 8) & 0x7;
+    let regList = instruction & 0xff;
+    let startAddr = cpu.readRegister(rn);
+    let endAddr = startAddr + (countSetBits(regList) * 4) - 4;
+    let addr = startAddr;
+    cpu.accessType = Timing.Access.NON_SEQUENTIAL;
+    for (let reg = 0; reg < 8; ++reg) {
+        if ((regList & 0x1) != 0) {
+            cpu.write32(addr, reg);
+            addr += 4;
+            cpu.accessType = Timing.Access.SEQUENTIAL;
+        }
+        regList = regList >>> 1;
+    }
+
+    assert(endAddr == (addr - 4));
+    cpu.writeRegister(rn, endAddr + 4);
 }
 
