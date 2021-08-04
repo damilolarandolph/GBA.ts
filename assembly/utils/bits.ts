@@ -46,6 +46,15 @@ export function countSetBits(bits: u32): u32 {
     return count;
 }
 
+
+@inline
+export function signExtend(bits: u32, size: u32): u32 {
+    let offset = 32 - size;
+    bits <<= offset;
+    bits = u32(<i32>bits >> offset);
+    return bits;
+}
+
 export function matchBitPattern(pattern: String, bits: u32): bool {
 
     for (let index = pattern.length - 1; index >= 0; --index) {
