@@ -4,7 +4,7 @@ import { ARM7CPU, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
 
 
-export function BC(cpu: ARM7CPU) {
+export function BC(cpu: ARM7CPU): void {
 
     if (!testCondition(cpu)) {
         cpu.addCycles(1);
@@ -29,7 +29,7 @@ export function BC(cpu: ARM7CPU) {
 }
 
 
-export function B(cpu: ARM7CPU) {
+export function B(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let targetAddr: u32 = instruction & 0x7FF;
 
@@ -50,7 +50,7 @@ export function B(cpu: ARM7CPU) {
 }
 
 
-export function BLBLX(cpu: ARM7CPU) {
+export function BLBLX(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let offset: u32 = instruction & 0x7ff;
     let hBits: u32 = (instruction >>> 11) & 0x3;
@@ -68,11 +68,12 @@ export function BLBLX(cpu: ARM7CPU) {
     }
 }
 
-export function BX(cpu: ARM7CPU) {
+export function BX(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let h2Bit = (instruction >>> 6) & 0x1;
-    let rm = (h2Bit << 4) | ((instruction >> 3) & 0x7);
+    let rm = (h2Bit << 3) | ((instruction >> 3) & 0x7);
     let rmVal = cpu.readRegister(rm);
+    trace("BX ADDR", 2, rm, rmVal);
     cpu.setFlag(StatusFlags.THUMB_MODE, (rmVal & 0x1) != 0);
     cpu.writeRegister(15, rmVal & 0xFFFFFFFE);
 }
