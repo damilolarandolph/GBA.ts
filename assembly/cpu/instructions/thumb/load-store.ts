@@ -162,9 +162,9 @@ export function STRSHB(cpu: ARM7CPU): void {
 
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     if (isByte) {
-        cpu.write8(address, cpu.readRegister(destination) & 0xff);
+        cpu.write8(address, u8(cpu.readRegister(destination) & 0xff));
     } else {
-        cpu.write16(address, cpu.readRegister(destination) & 0xffff);
+        cpu.write16(address, u16(cpu.readRegister(destination) & 0xffff));
     }
 }
 
