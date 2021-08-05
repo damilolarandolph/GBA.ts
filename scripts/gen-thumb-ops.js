@@ -45,7 +45,7 @@ matchers.push(THUMB_1);
 // ADD/SUBTRACT
 /** @type {MatcherFunc} */
 function THUMB_2(row, col, fullInstruction) {
-    if (!matchBitPattern('0001', row) || !matchBitPattern('1xxx', col)) {
+    if (!matchBitPattern('0001', row) || !matchBitPattern('1xxxxx', col)) {
         return false;
     }
 
@@ -88,8 +88,15 @@ matchers.push(THUMB_3);
 //Format 4: ALU operations
 /** @type {MatcherFunc} */
 function THUMB_4(row, col, fullInstruction) {
-    if (!matchBitPattern('0100', row) || !matchBitPattern('00xx', col)) {
+    if (row == 4) {
+        console.log(col)
+    }
+    if (!matchBitPattern('0100', row) || !matchBitPattern('00xxxx', col)) {
         return false;
+    }
+
+    if (row == 4) {
+        console.log(col, 'redux');
     }
 
     let op = getBits(fullInstruction, 9, 6);
@@ -137,7 +144,7 @@ matchers.push(THUMB_4);
 // Format 5: Hi register operations/branch exchange
 /** @type {MatcherFunc} */
 function THUMB_5(row, col, fullInstruction) {
-    if (!matchBitPattern('0100', row) || !matchBitPattern('01xx', col)) {
+    if (!matchBitPattern('0100', row) || !matchBitPattern('01xxxx', col)) {
         return false;
     }
 
@@ -162,7 +169,7 @@ matchers.push(THUMB_5);
 // Format 6: PC-relative load
 /** @type {MatcherFunc} */
 function THUMB_6(row, col, fullInstruction) {
-    if (!matchBitPattern('0100', row) || !matchBitPattern('1xxx', col)) {
+    if (!matchBitPattern('0100', row) || !matchBitPattern('1xxxxx', col)) {
         return false;
     }
 
@@ -174,7 +181,7 @@ matchers.push(THUMB_6);
 // Format 7: load/store with register offset
 /** @type {MatcherFunc} */
 function THUMB_7(row, col, fullInstruction) {
-    if (!matchBitPattern('0101', row) || !matchBitPattern('xx0x', col)) {
+    if (!matchBitPattern('0101', row) || !matchBitPattern('xx0xxx', col)) {
         return false;
     }
 
@@ -201,7 +208,7 @@ matchers.push(THUMB_7);
 // Format 8: load/store sign-extended byte/halfword
 /** @type {MatcherFunc} */
 function THUMB_8(row, col, fullInstruction) {
-    if (!matchBitPattern('0101', row) || !matchBitPattern('xx1x', col)) {
+    if (!matchBitPattern('0101', row) || !matchBitPattern('xx1xxx', col)) {
         return false;
     }
 
@@ -299,7 +306,7 @@ matchers.push(THUMB_12);
 // Format 13: add offset to Stack Pointer
 /** @type {MatcherFunc} */
 function THUMB_13(row, col, fullInstruction) {
-    if (!matchBitPattern('1011', row) || !matchBitPattern('0000', col)) {
+    if (!matchBitPattern('1011', row) || !matchBitPattern('0000xx', col)) {
         return false;
     }
 
@@ -310,7 +317,7 @@ matchers.push(THUMB_13);
 // Format 14: push/pop registers
 /** @type {MatcherFunc} */
 function THUMB_14(row, col, fullInstruction) {
-    if (!matchBitPattern('1011', row) || !matchBitPattern('x10x', col)) {
+    if (!matchBitPattern('1011', row) || !matchBitPattern('x10xxx', col)) {
         return false;
     }
 
@@ -363,7 +370,7 @@ matchers.push(THUMB_16);
 // Format 17: software interrupt
 /** @type {MatcherFunc} */
 function THUMB_17(row, col, fullInstruction) {
-    if (!matchBitPattern('1101', row) || !matchBitPattern('1111', col)) {
+    if (!matchBitPattern('1101', row) || !matchBitPattern('1111xx', col)) {
         return false;
     }
 
@@ -374,7 +381,7 @@ matchers.push(THUMB_17);
 // Format 18: unconditional branch
 /** @type {MatcherFunc} */
 function THUMB_18(row, col, fullInstruction) {
-    if (!matchBitPattern('1110', row) || !matchBitPattern('0xxx', col)) {
+    if (!matchBitPattern('1110', row) || !matchBitPattern('0xxxxx', col)) {
         return false;
     }
 
@@ -402,7 +409,7 @@ import * as t from './thumb/thumb';
 
 export type opHandler = (cpu: ARM7CPU) => void;
 
-export const armOpTable:  StaticArray<StaticArray<opHandler | null>> = [
+export const thumbOpTable:  StaticArray<StaticArray<opHandler | null>> = [
 
 
 
@@ -410,9 +417,9 @@ export const armOpTable:  StaticArray<StaticArray<opHandler | null>> = [
 
 for (let row = 0; row < 16; ++row) {
     let arrayCol = `/** 0x${row.toString(16)} **/[`;
-    for (let col = 0; col < 16; ++col) {
+    for (let col = 0; col < 64; ++col) {
 
-        let fullInstruction = (row << 12) | (col << 8);
+        let fullInstruction = (row << 12) | (col << 6);
         let op;
         matchers.some(func => {
             op = func(row, col, fullInstruction)
@@ -420,7 +427,7 @@ for (let row = 0; row < 16; ++row) {
         });
 
         arrayCol += op ? op : ' null';
-        if (col != 15)
+        if (col != 63)
             arrayCol += ',';
     }
 
