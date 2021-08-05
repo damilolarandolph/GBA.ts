@@ -6,8 +6,9 @@ import { getBit, getBits, setBit } from '../utils/bits';
 import Queue from '../utils/queue';
 import { armOpTable } from './instructions/arm-op-table';
 import { testCondition, opHandler } from './instructions/instructions';
+import { thumbOpTable } from './instructions/thumb-op-table';
 import { InterruptManager } from './interrupt-manager';
-//import { console } from '.././bridge';
+import { console } from '../index';
 
 export enum CPU_MODES {
     USR = 0x10,
@@ -32,7 +33,7 @@ export enum StatusFlags {
 
 export class ARM7CPU {
     private _opQueue: Queue<u32> = new Queue<u32>(10);
-    private _pipeline: StaticArray<u32> = new StaticArray(3);
+    private _pipeline: StaticArray<u32> = [0, 0];
     private _pipelineLength: i32 = 0;
     private _memoryMap: SystemMemory;
     private _currentOp: u32 = 0;
@@ -45,6 +46,7 @@ export class ARM7CPU {
     public totalCycles: u64 = 0;
     private scheduler: Scheduler;
     public accessType: Timing.Access = Timing.Access.NON_SEQUENTIAL;
+
 
 
     constructor(
@@ -95,54 +97,98 @@ export class ARM7CPU {
     }
 
     tick(): void {
-        if (this.canExecute()) {
-            this.execute();
+        if (!this.canExecute()) {
             this.prefetch();
-        } else {
-            this.prefetch()
         }
+        this.execute();
+        this.prefetch();
     }
 
     execute(): void {
-
-        let op = this._opQueue.dequeue();
-        this._currentOp = op;
-        let handler = this.getOpHandler(this._currentOp);
-        ++this.totalCycles;
-        if (testCondition(this)) {
+        let handler = this.getOpHandler(this._pipeline[0]);
+        //this.logState();
+        if (!this.isFlag(StatusFlags.THUMB_MODE)) {
+            if (testCondition(this)) {
+                handler(this);
+            } else {
+                this.addCycles(1);
+            }
+        } else {
             handler(this);
         }
-        this.addCycles(1);
+        if (unchecked(this._pipeline[1]) != 0) {
+
+            this._pipeline[0] = this._pipeline[1];
+            this._pipeline[1] = 0;
+        }
     }
 
     canExecute(): boolean {
-        return this._opQueue.length !== 0;
+        return this._pipeline[0] != 0;
     }
 
 
-
-
-
-    public prefetch(): void {
-
-        while (this._opQueue.length < 2) {
-            this._opQueue.enqueue(this.read32(this.PC));
+    private prefetchARM(): void {
+        if (this._pipeline[0] == 0) {
+            this._pipeline[0] = this.read32(this.PC);
+            this.accessType = Timing.Access.SEQUENTIAL;
+            this._pipeline[1] = this.read32(this.PC + 4);
+            this.PC += 8;
+        } else if (this._pipeline[1] == 0) {
+            this._pipeline[1] = this.read32(this.PC);
             this.accessType = Timing.Access.SEQUENTIAL;
             this.PC += 4;
         }
     }
 
+    private prefetchThumb(): void {
+        if (this._pipeline[0] == 0) {
+            this._pipeline[0] = this.read16(this.PC);
+            this.accessType = Timing.Access.SEQUENTIAL;
+            this._pipeline[1] = this.read16(this.PC + 2);
+            this.PC += 4;
+        } else if (this._pipeline[1] == 0) {
+            this._pipeline[1] = this.read16(this.PC);
+            this.accessType = Timing.Access.SEQUENTIAL;
+            this.PC += 2;
+        }
+    }
+
+
+    public prefetch(): void {
+
+        // while (this._opQueue.length < 2) {
+        //     this._opQueue.enqueue(this.read32(this.PC));
+        //     this.accessType = Timing.Access.SEQUENTIAL;
+        //     this.PC += 4;
+        // }
+
+        if (this.isFlag(StatusFlags.THUMB_MODE)) {
+            this.prefetchThumb()
+        } else {
+            this.prefetchARM();
+        }
+    }
+
 
     private getOpHandler(instruction: u32): opHandler {
-        let row = getBits(instruction, 27, 20);
-        let col = getBits(instruction, 7, 4);
-        return (armOpTable[row][col] as opHandler);
+        if (!this.isFlag(StatusFlags.THUMB_MODE)) {
+            let row = getBits(instruction, 27, 20);
+            let col = getBits(instruction, 7, 4);
+            //  trace("OP ARM", 2, row, col);
+            return (armOpTable[row][col] as opHandler);
+        } else {
+            let row = getBits(instruction, 15, 12);
+            let col = getBits(instruction, 11, 6);
+            // trace('OP THUMB', 2, row, col);
+            return (thumbOpTable[row][col] as opHandler);
+        }
     }
 
 
 
     get currentInstruction(): u32 {
-        return this._currentOp;
+        return this._pipeline[0];
     }
 
     readRegister(regNo: i32, mode: CPU_MODES = this._currentMode): u32 {
@@ -179,19 +225,20 @@ export class ARM7CPU {
         return;
     }
 
-    // private logState(): void {
-    //     let row = getBits(this._currentOp, 27, 20);
-    //     let col = getBits(this._currentOp, 7, 4);
-    //     console.log(`
-    //     R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
-    //     R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
-    //     R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
-    //     R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
-    //     PC: ${this.toHexString(this.readRegister(15))} PC (adjusted): ${this.toHexString(this.readRegister(15) - 8)}
-    //     FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
-    //     OPCODE: ${this.toHexString(this._currentOp)} ROW: ${this.toHexString(row)} COL: ${this.toHexString(col)}
-    //     `);
-    // }
+    private logState(): void {
+        // let row = getBits(this._currentOp, 27, 20);
+        // let col = getBits(this._currentOp, 7, 4);
+        console.log(`
+        R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
+        R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
+        R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
+        R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
+        PC: ${this.toHexString(this.readRegister(15))} PC (adjusted): ${this.toHexString(this.readRegister(15) - 8)}
+        FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
+        THUMB: ${this.isFlag(StatusFlags.THUMB_MODE) ? "Yes" : "No"}
+        OPCODE: ${this.toHexString(this.currentInstruction)}
+        `);
+    }
 
     private toHexString(value: u32): string {
         return `0x${value.toString(16).toUpperCase()}`;
@@ -206,7 +253,8 @@ export class ARM7CPU {
     }
 
     private clearPipeline(): void {
-        this._opQueue.flush();
+        unchecked(this._pipeline[0] = 0);
+        unchecked(this._pipeline[1] = 0);
     }
 
 
@@ -247,6 +295,9 @@ export class ARM7CPU {
     }
 
     setFlag(flag: StatusFlags, value: boolean): void {
+        if (flag == StatusFlags.THUMB_MODE && value != this.isFlag(flag)) {
+            this.clearPipeline();
+        }
         this.CPSR = setBit(this.CPSR, flag, value);
     }
 
