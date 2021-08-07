@@ -11,8 +11,7 @@ export const messages = Object.freeze({
     GET_LATEST_FRAME: 'get_latest_frame',
     LATEST_FRAME_RESULT: 'latest_frame_result',
 
-
-    SCALE_FRAME: 'scale_frame',
+    PAUSE: 'pause',
 });
 
 export class MessageListener {

@@ -1,16 +1,26 @@
 import './App.css';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Screen } from './screen';
 import ClientEmulatorBridge from './gba-worker/client';
 const App = () => {
     const [gba, setGBA] = React.useState(null);
     const { canvas, ref } = useCanvas();
+    const [isPaused, setPaused] = useState(true);
 
     React.useEffect(() => {
         const gba = new ClientEmulatorBridge();
         gba.renderer.canvas = ref.current;
         setGBA(gba);
     }, []);
+
+    const pauseOrPlay = () => {
+        if (isPaused) {
+            gba.run();
+        } else {
+            gba.pause();
+        }
+        setPaused(!isPaused);
+    }
 
     // React.useEffect(() => {
     //     if (gba != null)
@@ -26,9 +36,9 @@ const App = () => {
             let buffer = await file.arrayBuffer();
             let arry = new Uint8Array(buffer);
             gba.loadRom(arry)
-            gba.run();
         }} />
-        <Screen />
+
+        <button onClick={pauseOrPlay}> {isPaused ? 'Play' : 'Pause'}</button>
     </div>
 };
 

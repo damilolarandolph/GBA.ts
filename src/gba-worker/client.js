@@ -57,6 +57,10 @@ export default class ClientEmulatorBridge {
         this.#worker.postMessage({ type: messages.LOAD_ROM, args: [buffer] });
     }
 
+    pause() {
+        this.#worker.postMessage({ type: messages.PAUSE });
+    }
+
 }
 
 

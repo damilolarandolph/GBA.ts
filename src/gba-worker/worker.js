@@ -14,11 +14,13 @@ export default class Emulator {
 
     #rafId;
     #canvas;
+    #fpsInterval;
 
     frames = 0;
     timestamp = 0;
     messageHandler = new MessageListener();
     readBuffer = new Uint8ClampedArray()
+
 
 
     constructor() {
@@ -41,6 +43,10 @@ export default class Emulator {
                 break;
             case messages.PING:
                 console.log('ping received');
+                break;
+            case messages.PAUSE:
+                clearTimeout(this.#rafId);
+                clearInterval(this.#fpsInterval);
                 break;
         }
     }
@@ -81,12 +87,14 @@ export default class Emulator {
     }
 
     run() {
-        setInterval(() => {
+        this.#fpsInterval = setInterval(() => {
             console.log("FPS: ", this.frames);
             this.frames = 0;
         }, 1000)
         this.runFrame();
     }
+
+
 
 
 
