@@ -1,9 +1,8 @@
 import { getBit, getBits } from "../../../utils/bits";
 import { ARM7CPU, StatusFlags } from "../../cpu";
-import { testCondition } from "../instructions";
 
 
-function deduceMStates(operand: u32): u32 {
+export function deduceMStates(operand: u32): u32 {
     let group1 = getBits(operand, 31, 7);
     let group2 = getBits(operand, 31, 15);
     let group3 = getBits(operand, 30, 23);
