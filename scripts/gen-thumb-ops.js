@@ -88,15 +88,8 @@ matchers.push(THUMB_3);
 //Format 4: ALU operations
 /** @type {MatcherFunc} */
 function THUMB_4(row, col, fullInstruction) {
-    if (row == 4) {
-        console.log(col)
-    }
     if (!matchBitPattern('0100', row) || !matchBitPattern('00xxxx', col)) {
         return false;
-    }
-
-    if (row == 4) {
-        console.log(col, 'redux');
     }
 
     let op = getBits(fullInstruction, 9, 6);
@@ -193,14 +186,14 @@ function THUMB_7(row, col, fullInstruction) {
     }
 
     if (isLoad && isByte) {
-        return ' t.LDRSHB'
+        return ' t.LDRB'
     }
 
     if (!isLoad && !isByte) {
         return ' t.STR';
     }
 
-    return ' t.STRSHB';
+    return ' t.STRB';
 }
 
 matchers.push(THUMB_7);
@@ -216,18 +209,18 @@ function THUMB_8(row, col, fullInstruction) {
     let hBit = getBit(fullInstruction, 11);
 
     if (!sBit && !hBit) {
-        return ' t.STRSHB';
+        return ' t.STRH';
     }
 
     if (!sBit && hBit) {
-        return ' t.LDRSHB';
+        return ' t.LDRH';
     }
 
     if (sBit && !hBit) {
-        return ' t.LDRSHB';
+        return ' t.LDRSB';
     }
 
-    return ' t.LDRSHB';
+    return ' t.LDRSH';
 }
 
 matchers.push(THUMB_8);
@@ -251,10 +244,10 @@ function THUMB_9(row, col, fullInstruction) {
     }
 
     if (!lBit && bBit) {
-        return ' t.STRSHB';
+        return ' t.STRB';
     }
 
-    return ' t.LDRSHB';
+    return ' t.LDRB';
 }
 
 matchers.push(THUMB_9);
@@ -268,9 +261,9 @@ function THUMB_10(row, col, fullInstruction) {
     }
 
     if (getBit(fullInstruction, 11)) {
-        return ' t.LDRSHB';
+        return ' t.LDRH';
     } else {
-        return ' t.STRSHB';
+        return ' t.STRH';
     }
 }
 matchers.push(THUMB_10);
