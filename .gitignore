@@ -10,3 +10,5 @@
 **/__tests__/**/resources/
 **/__tests__/**/cpu/log-tests
 log-arrays.js
+arm-op-table.ts
+thumb-op-table.ts
