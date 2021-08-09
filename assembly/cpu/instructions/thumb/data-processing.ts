@@ -11,13 +11,14 @@ import { carryFrom, isNegative, signOverflowFrom, subSignOverflow, underflowFrom
     format: u32;
 }
 
+
+
 const formatResult: FormatResult = { op1: 0, op2: 0, destination: 0, format: 0 };
 
 
 function deduceFormat(cpu: ARM7CPU): FormatResult {
 
     let instruction = cpu.currentInstruction;
-    trace("FORMAT");
 
     if ((instruction >>> 10) == 0b000110) {
         formatResult.format = 1;
@@ -51,7 +52,7 @@ function deduceFormat(cpu: ARM7CPU): FormatResult {
         let shiftImmed = (instruction >>> 6) & 0x1f;
         let rm = (instruction >>> 3) & 0x7;
         formatResult.op1 = cpu.readRegister(rm);
-        formatResult.op2 = cpu.readRegister(shiftImmed);
+        formatResult.op2 = shiftImmed;
         formatResult.destination = instruction & 0x7;
     }
 
@@ -97,7 +98,6 @@ function deduceFormat(cpu: ARM7CPU): FormatResult {
     } else {
         throw new Error("Unknown Format !");
     }
-    trace("FORMAT", 1, formatResult.format);
     return formatResult;
 }
 
@@ -213,7 +213,6 @@ export function BIC(cpu: ARM7CPU): void {
 export function CMN(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 + format.op2;
-    trace("CMN");
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, carryFrom(format.op1, format.op2));
@@ -224,7 +223,6 @@ export function CMP(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 - format.op2;
 
-    trace("CMP");
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
     cpu.setFlag(StatusFlags.CARRY, !underflowFrom(format.op1, format.op2));
@@ -234,7 +232,6 @@ export function CMP(cpu: ARM7CPU): void {
 export function EOR(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 ^ format.op2;
-    trace("EOR");
     cpu.writeRegister(format.destination, result);
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
     cpu.setFlag(StatusFlags.ZERO, result == 0);
@@ -317,9 +314,10 @@ export function ASR(cpu: ARM7CPU): void {
 
 export function LSL(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
-    let shifterOut: ShifterOutput;
+    let shifterOut: ShifterOutput = lsl(format.op1, format.op2, cpu);
 
-    shifterOut = lsl(format.op1, format.op2, cpu);
+    trace("LSL", 3, format.op1, format.op2, shifterOut.operand);
+
 
     cpu.writeRegister(format.destination, shifterOut.operand);
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(shifterOut.operand));
@@ -338,7 +336,6 @@ export function LSR(cpu: ARM7CPU): void {
         cpu.addCycles(1);
     }
 
-    trace("LSR");
     cpu.writeRegister(format.destination, shifterOut.operand);
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(shifterOut.operand));
     cpu.setFlag(StatusFlags.ZERO, shifterOut.operand == 0);
@@ -363,7 +360,6 @@ export function ROR(cpu: ARM7CPU): void {
         result = right | left;
     }
 
-    trace("ROR", 3, format.op2, format.op1, result);
 
     cpu.writeRegister(format.destination, result);
     cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
