@@ -55,16 +55,15 @@ export function BLBLX(cpu: ARM7CPU): void {
     let offset: u32 = instruction & 0x7ff;
     let hBits: u32 = (instruction >>> 11) & 0x3;
 
-    if (hBits == 0x2) {
-        offset = offset << 12;
+    if (hBits == 0b10) {
         let pc = cpu.readRegister(15);
-        cpu.writeRegister(14, uAdd(pc, signExtend(offset, 11)));
-    } else if (hBits == 0x3) {
+        cpu.writeRegister(14, uAdd(pc, (signExtend(offset, 11) << 12)));
+    } else if (hBits == 0b11) {
         offset = offset << 1;
         let lr = cpu.readRegister(14);
         let pc = cpu.readRegister(15);
         cpu.writeRegister(15, lr + offset);
-        cpu.writeRegister(14, (pc - 2) | 1);
+        cpu.writeRegister(14, (pc - u32(2)) | 1);
     }
 }
 
