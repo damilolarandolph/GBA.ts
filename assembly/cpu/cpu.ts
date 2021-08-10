@@ -8,7 +8,7 @@ import { armOpTable } from './instructions/arm-op-table';
 import { testCondition, opHandler } from './instructions/instructions';
 import { thumbOpTable } from './instructions/thumb-op-table';
 import { InterruptManager } from './interrupt-manager';
-import { console } from '../index';
+import { console, loggers } from '../index';
 
 export enum CPU_MODES {
     USR = 0x10,
@@ -31,19 +31,61 @@ export enum StatusFlags {
 }
 
 
+class PSR {
+    // Negative Flag
+    n: boolean = false;
+
+    // Zero Flag
+    z: boolean = false;
+
+    // Carry Flag
+    c: boolean = false;
+
+    // Overflow Flag
+    v: boolean = false;
+
+    // Thumb Mode
+    thumb: boolean = false;
+
+    // Irq Enabled
+    irqDisabled: boolean = false;
+
+    // FIQ Enabled
+    fiqDisabled: boolean = false;
+
+    // CPU Mode
+    mode: u32 = CPU_MODES.USR;
+
+    get val(): u32 {
+        let flags: u32 = (u32(this.n) << 31) | (u32(this.z) << 30) | (u32(this.c) << 29) | (u32(this.v) << 28);
+        let preModeFlags: u32 = (u32(this.irqDisabled) << 7) | (u32(this.fiqDisabled) << 6) | (u32(this.thumb) << 5);
+        let result: u32 = flags | preModeFlags | this.mode;
+        return result;
+    }
+    set val(value: u32) {
+        this.n = getBit(value, 31);
+        this.z = getBit(value, 30);
+        this.c = getBit(value, 29);
+        this.v = getBit(value, 28);
+
+        this.irqDisabled = getBit(value, 7);
+        this.fiqDisabled = getBit(value, 6);
+        this.thumb = getBit(value, 5);
+        this.mode = value & 0x1f;
+    }
+}
+
+
+
+
 export class ARM7CPU {
-    private _opQueue: Queue<u32> = new Queue<u32>(10);
     private _pipeline: StaticArray<u32> = [0, 0];
-    private _pipelineLength: i32 = 0;
     private _memoryMap: SystemMemory;
-    private _currentOp: u32 = 0;
     private interuptManager: InterruptManager;
-    private _cspr: u32;
-    private _registers: StaticArray<u32> = new StaticArray(16);
+    private _cspr: PSR = new PSR();
+    private _registers: StaticArray<u32> = new StaticArray(31);
     private _currentMode: CPU_MODES = CPU_MODES.USR;
-    private _bankedRegisters: Map<CPU_MODES, StaticArray<u32>> = new Map();
-    private _SPSRs: Map<CPU_MODES, u32> = new Map();
-    public totalCycles: u64 = 0;
+    private _spsrs: StaticArray<PSR> = [new PSR(), new PSR(), new PSR(), new PSR(), new PSR()];
     private scheduler: Scheduler;
     public accessType: Timing.Access = Timing.Access.NON_SEQUENTIAL;
 
@@ -57,20 +99,8 @@ export class ARM7CPU {
         this.scheduler = scheduler;
         this._memoryMap = memoryMap;
         this.interuptManager = interruptManager;
-        this._bankedRegisters.set(CPU_MODES.SVC, new StaticArray(2));
-        this._bankedRegisters.set(CPU_MODES.ABT, new StaticArray(2));
-        this._bankedRegisters.set(CPU_MODES.UND, new StaticArray(2));
-        this._bankedRegisters.set(CPU_MODES.IRQ, new StaticArray(2));
-        this._bankedRegisters.set(CPU_MODES.FIQ, new StaticArray(7));
-
-        this._SPSRs.set(CPU_MODES.SVC, 0);
-        this._SPSRs.set(CPU_MODES.ABT, 0);
-        this._SPSRs.set(CPU_MODES.UND, 0);
-        this._SPSRs.set(CPU_MODES.IRQ, 0);
-        this._SPSRs.set(CPU_MODES.FIQ, 0);
-
         this.emulateBIOS();
-    }
+    };
 
     private emulateBIOS(): void {
         this.writeRegister(0, 0x8000000);
@@ -89,7 +119,7 @@ export class ARM7CPU {
         this.writeRegister(13, 0x03007F00);
         this.writeRegister(14, 0);
         this.PC = 0x08000000
-        this.CPSR = 0x6000001F;
+        this._cspr.val = 0x6000001F;
     }
 
     addCycles(val: u32 = 1): void {
@@ -106,8 +136,7 @@ export class ARM7CPU {
 
     execute(): void {
         let handler = this.getOpHandler(this._pipeline[0]);
-        //this.logState();
-        if (!this.isFlag(StatusFlags.THUMB_MODE)) {
+        if (!this._cspr.thumb) {
             if (testCondition(this)) {
                 handler(this);
             } else {
@@ -116,6 +145,7 @@ export class ARM7CPU {
         } else {
             handler(this);
         }
+        this.logState();
         if (unchecked(this._pipeline[1]) != 0) {
 
             this._pipeline[0] = this._pipeline[1];
@@ -163,7 +193,7 @@ export class ARM7CPU {
         //     this.PC += 4;
         // }
 
-        if (this.isFlag(StatusFlags.THUMB_MODE)) {
+        if (this._cspr.thumb) {
             this.prefetchThumb()
         } else {
             this.prefetchARM();
@@ -172,7 +202,7 @@ export class ARM7CPU {
 
 
     private getOpHandler(instruction: u32): opHandler {
-        if (!this.isFlag(StatusFlags.THUMB_MODE)) {
+        if (!this._cspr.thumb) {
             let row = getBits(instruction, 27, 20);
             let col = getBits(instruction, 7, 4);
             //  trace("OP ARM", 2, row, col);
@@ -191,36 +221,51 @@ export class ARM7CPU {
         return this._pipeline[0];
     }
 
-    readRegister(regNo: i32, mode: CPU_MODES = this._currentMode): u32 {
+    readRegister(regNo: i32, mode: CPU_MODES = this._cspr.mode): u32 {
         return this.readRegMode(regNo, mode);
     }
 
     private readRegMode(regNo: i32, mode: CPU_MODES): u32 {
-        if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
-            let index = regNo - 8;
-            return this._bankedRegisters.get(CPU_MODES.FIQ)[i32(index)];
+
+
+        if (regNo <= 7 || mode == CPU_MODES.USR || mode == CPU_MODES.SYS || regNo == 15) {
+            return unchecked(this._registers[regNo])
+        };
+
+        const bankStart = 16;
+        if (mode == CPU_MODES.SVC && regNo >= 13) {
+            regNo = bankStart;
+        } else if (mode == CPU_MODES.ABT && regNo >= 13) {
+            regNo = bankStart + 2;
+        } else if (mode == CPU_MODES.UND && regNo >= 13) {
+            regNo = bankStart + 4;
+        } else if (mode == CPU_MODES.IRQ && regNo >= 13) {
+            regNo = bankStart + 6;
+        } else if (mode == CPU_MODES.FIQ && regNo >= 8) {
+            regNo = bankStart + 8;
         }
 
-        if ((mode != CPU_MODES.USR && mode != CPU_MODES.SYS) && regNo >= 13 && regNo < 15) {
-            let index = regNo - 13;
-            return this._bankedRegisters.get(mode)[i32(index)];
-        }
         return unchecked(this._registers[regNo]);
     }
     private writeRegMode(regNo: i32, value: u32, mode: CPU_MODES): void {
-
-
-        if (mode == CPU_MODES.FIQ && regNo >= 8 && regNo < 15) {
-            let index = regNo - 8;
-            this._bankedRegisters.get(CPU_MODES.FIQ)[i32(index)] = value;
+        if (regNo <= 7 || mode == CPU_MODES.USR || mode == CPU_MODES.SYS || regNo == 15) {
+            unchecked(this._registers[regNo] = value);
             return;
+        };
+
+        const bankStart = 16;
+        if (mode == CPU_MODES.SVC && regNo >= 13) {
+            regNo = bankStart;
+        } else if (mode == CPU_MODES.ABT && regNo >= 13) {
+            regNo = bankStart + 2;
+        } else if (mode == CPU_MODES.UND && regNo >= 13) {
+            regNo = bankStart + 4;
+        } else if (mode == CPU_MODES.IRQ && regNo >= 13) {
+            regNo = bankStart + 6;
+        } else if (mode == CPU_MODES.FIQ && regNo >= 8) {
+            regNo = bankStart + 8;
         }
 
-        if ((mode != CPU_MODES.USR && mode != CPU_MODES.SYS) && regNo >= 13 && regNo < 15) {
-            let index = regNo - 13;
-            this._bankedRegisters.get(mode)[i32(index)] = value;
-            return;
-        }
         unchecked(this._registers[regNo] = value);
         return;
     }
@@ -228,23 +273,46 @@ export class ARM7CPU {
     private logState(): void {
         // let row = getBits(this._currentOp, 27, 20);
         // let col = getBits(this._currentOp, 7, 4);
-        console.log(`
-        R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
-        R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
-        R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
-        R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
-        PC: ${this.toHexString(this.readRegister(15))} PC (adjusted): ${this.toHexString(this.readRegister(15) - 8)}
-        FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
-        THUMB: ${this.isFlag(StatusFlags.THUMB_MODE) ? "Yes" : "No"}
-        OPCODE: ${this.toHexString(this.currentInstruction)}
-        `);
+        let pc = this.readRegister(15);
+        let adjustedPC = this._cspr.thumb ? pc - 2 : pc - 4;
+        loggers.logCPU(
+            this.readRegister(0),
+            this.readRegister(1),
+            this.readRegister(2),
+            this.readRegister(3),
+            this.readRegister(4),
+            this.readRegister(5),
+            this.readRegister(6),
+            this.readRegister(7),
+            this.readRegister(8),
+            this.readRegister(9),
+            this.readRegister(10),
+            this.readRegister(11),
+            this.readRegister(12),
+            this.readRegister(13),
+            this.readRegister(14),
+            pc,
+            adjustedPC,
+            this._cspr.val,
+            this.currentInstruction
+        )
+        // console.log(`
+        // R0: ${this.toHexString(this.readRegister(0))} R1: ${this.toHexString(this.readRegister(1))} R2: ${this.toHexString(this.readRegister(2))} R3: ${this.toHexString(this.readRegister(3))}
+        // R4: ${this.toHexString(this.readRegister(4))} R5: ${this.toHexString(this.readRegister(5))} R6: ${this.toHexString(this.readRegister(6))} R7: ${this.toHexString(this.readRegister(7))}
+        // R8: ${this.toHexString(this.readRegister(8))} R9: ${this.toHexString(this.readRegister(9))} R10: ${this.toHexString(this.readRegister(10))} R11: ${this.toHexString(this.readRegister(11))}
+        // R12: ${this.toHexString(this.readRegister(12))} R13: ${this.toHexString(this.readRegister(13))} R14: ${this.toHexString(this.readRegister(14))}
+        // PC: ${this.toHexString(pc)} PC (adjusted): ${this.toHexString(adjustedPC)}
+        // FLAGS: ${this.isFlag(StatusFlags.CARRY) ? 'C' : '-'}${this.isFlag(StatusFlags.NEGATIVE) ? 'N' : '-'}${this.isFlag(StatusFlags.ZERO) ? 'Z' : '-'}${this.isFlag(StatusFlags.OVERFLOW) ? 'V' : '-'}
+        // THUMB: ${this.isFlag(StatusFlags.THUMB_MODE) ? "Yes" : "No"}
+        // OPCODE: ${this.toHexString(this.currentInstruction)}
+        // `);
     }
 
     private toHexString(value: u32): string {
         return `0x${value.toString(16).toUpperCase()}`;
     }
 
-    writeRegister(regNo: i32, val: u32, mode: CPU_MODES = this._currentMode): void {
+    writeRegister(regNo: i32, val: u32, mode: CPU_MODES = this.cpsr.mode): void {
         this.writeRegMode(regNo, val, mode);
         if (regNo == 15) {
             this.accessType = Timing.Access.NON_SEQUENTIAL;
@@ -259,48 +327,24 @@ export class ARM7CPU {
 
 
 
-    get CPSR(): u32 {
+    get cpsr(): PSR {
         return this._cspr;
     }
 
-    get SPSR(): u32 {
-        return this._SPSRs.get(this._currentMode);
-    }
-
-    set SPSR(val: u32) {
-        this._SPSRs.set(this._currentMode, val);
-    }
-
-    set CPSR(data: u32) {
-        this._cspr = data;
-        this._currentMode = getBits(this._cspr, 4, 0);
-    }
-
-
-    isFlag(flag: StatusFlags): boolean {
-        return getBit(this._cspr, flag);
-    }
-
-    get mode(): CPU_MODES {
-        return this._currentMode;
-    }
-
-    set mode(val: CPU_MODES) {
-        let newCpsr = (this.CPSR & ~(u32(0x1f))) | val
-        this.CPSR = newCpsr;
-    }
-
-    flagVal(flag: StatusFlags): u32 {
-        return this.isFlag(flag) ? u32(1) : u32(0);
-    }
-
-    setFlag(flag: StatusFlags, value: boolean): void {
-        if (flag == StatusFlags.THUMB_MODE && value != this.isFlag(flag)) {
-            this.clearPipeline();
+    get spsr(): PSR {
+        switch (this._cspr.mode) {
+            case CPU_MODES.SVC:
+                return unchecked(this._spsrs[0]);
+            case CPU_MODES.ABT:
+                return unchecked(this._spsrs[1]);
+            case CPU_MODES.UND:
+                return unchecked(this._spsrs[2]);
+            case CPU_MODES.IRQ:
+                return unchecked(this._spsrs[3]);
+            default:
+                return unchecked(this._spsrs[4]);
         }
-        this.CPSR = setBit(this.CPSR, flag, value);
     }
-
 
 
     get PC(): u32 {

@@ -1,5 +1,6 @@
 import { getBit, getBits } from "../../../utils/bits";
 import { ARM7CPU, StatusFlags } from "../../cpu";
+import { isNegative } from "./alu";
 
 
 export function deduceMStates(operand: u32): u32 {
@@ -36,8 +37,8 @@ export function MLA(cpu: ARM7CPU): void {
     cpu.writeRegister(rd, result);
 
     if (getBit(cpu.currentInstruction, 20)) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -54,8 +55,8 @@ export function MUL(cpu: ARM7CPU): void {
     cpu.writeRegister(rd, result);
 
     if (getBit(cpu.currentInstruction, 20)) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -79,8 +80,8 @@ export function UMLAL(cpu: ARM7CPU): void {
     cpu.writeRegister(rdLo, u32(result));
 
     if (sBit) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >>> 32), 31))
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(u32(result >>> 32));
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -111,8 +112,8 @@ export function SMLAL(cpu: ARM7CPU): void {
     cpu.writeRegister(rdLo, u32(result));
 
     if (sBit) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(u32(result >>> 32));
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -143,8 +144,8 @@ export function SMLUL(cpu: ARM7CPU): void {
     cpu.writeRegister(rdLo, u32(result));
 
     if (sBit) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(u32(result >>> 32));
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -163,7 +164,7 @@ export function UMULL(cpu: ARM7CPU): void {
     cpu.writeRegister(rdLo, u32(result));
 
     if (sBit) {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(u32(result >> 32), 31))
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(u32(result >>> 32));
+        cpu.cpsr.z = result == 0;
     }
 }

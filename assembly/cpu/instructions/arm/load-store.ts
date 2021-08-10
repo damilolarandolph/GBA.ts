@@ -168,9 +168,9 @@ export function LDM3(cpu: ARM7CPU): void {
             currentAddress += 4;
         }
     }
-    cpu.CPSR = cpu.SPSR;
+    cpu.cpsr.val = cpu.spsr.val;
     let pcVal = cpu.read32(currentAddress);
-    if (cpu.isFlag(StatusFlags.THUMB_MODE)) {
+    if (cpu.cpsr.thumb) {
         cpu.writeRegister(15, pcVal & 0xFFFFFFFE);
     } else {
         cpu.writeRegister(15, pcVal & 0xFFFFFFFC);
@@ -186,7 +186,7 @@ export function LDR(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (rd == 15) {
         cpu.writeRegister(15, shifterOutput.operand & 0xFFFFFFFE);
-        cpu.setFlag(StatusFlags.THUMB_MODE, (shifterOutput.operand & 0x1) == 1);
+        cpu.cpsr.thumb = (shifterOutput.operand & 0x1) != 0;
     } else {
         cpu.writeRegister(rd, shifterOutput.operand);
     }

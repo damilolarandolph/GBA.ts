@@ -1,5 +1,5 @@
 import { getBits } from '../../utils/bits';
-import { ARM7CPU, StatusFlags } from '../cpu';
+import { ARM7CPU } from '../cpu';
 
 
 export type opHandler = (cpu: ARM7CPU) => void;
@@ -8,53 +8,43 @@ export type opHandler = (cpu: ARM7CPU) => void;
 export function testCondition(cpu: ARM7CPU): boolean {
     let instruction = cpu.currentInstruction;
     let opcode: u32;
-    if (cpu.isFlag(StatusFlags.THUMB_MODE)) {
+    if (cpu.cpsr.thumb) {
         opcode = getBits(instruction, 11, 8);
     } else {
         opcode = getBits(instruction, 31, 28);
     }
     switch (opcode) {
         case 0x0:
-            return cpu.isFlag(StatusFlags.ZERO);
+            return cpu.cpsr.z;
         case 0x1:
-            return !cpu.isFlag(StatusFlags.ZERO);
+            return !cpu.cpsr.z;
         case 0b0010:
-            return cpu.isFlag(StatusFlags.CARRY);
+            return cpu.cpsr.c;
         case 0b0011:
-            return !cpu.isFlag(StatusFlags.CARRY);
+            return !cpu.cpsr.c;
         case 0b0100:
-            return cpu.isFlag(StatusFlags.NEGATIVE);
+            return cpu.cpsr.n;
         case 0b0101:
-            return !cpu.isFlag(StatusFlags.NEGATIVE);
+            return !cpu.cpsr.n;
         case 0b0110:
-            return cpu.isFlag(StatusFlags.OVERFLOW);
+            return cpu.cpsr.v;
         case 0b0111:
-            return !cpu.isFlag(StatusFlags.OVERFLOW);
+            return !cpu.cpsr.v;
         case 0b1000:
-            return cpu.isFlag(StatusFlags.CARRY) && !cpu.isFlag(StatusFlags.ZERO);
+            return cpu.cpsr.c && !cpu.cpsr.z;
         case 0b1001:
-            return !cpu.isFlag(StatusFlags.CARRY) && cpu.isFlag(StatusFlags.ZERO);
+            return !cpu.cpsr.c && cpu.cpsr.z;
         case 0b1010: {
-            let negative = cpu.isFlag(StatusFlags.NEGATIVE);
-            let overflow = cpu.isFlag(StatusFlags.CARRY);
-            return negative == overflow;
+            return cpu.cpsr.n == cpu.cpsr.v;
         }
         case 0b1011: {
-            let negative = cpu.isFlag(StatusFlags.NEGATIVE);
-            let overflow = cpu.isFlag(StatusFlags.CARRY);
-            return negative != overflow;
+            return cpu.cpsr.n != cpu.cpsr.v;
         }
         case 0b1100: {
-            let zero = cpu.isFlag(StatusFlags.ZERO);
-            let negative = cpu.isFlag(StatusFlags.NEGATIVE);
-            let overflow = cpu.isFlag(StatusFlags.OVERFLOW);
-            return !zero && (negative == overflow);
+            return !cpu.cpsr.z && (cpu.cpsr.n == cpu.cpsr.v);
         }
         case 0b1101: {
-            let zero = cpu.isFlag(StatusFlags.ZERO);
-            let negative = cpu.isFlag(StatusFlags.NEGATIVE);
-            let overflow = cpu.isFlag(StatusFlags.OVERFLOW);
-            return zero && (negative != overflow);
+            return cpu.cpsr.z && (cpu.cpsr.n != cpu.cpsr.v);
         }
         case 0b1110:
             return true;

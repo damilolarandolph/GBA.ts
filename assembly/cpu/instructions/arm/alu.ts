@@ -5,16 +5,22 @@ import { testCondition } from "../instructions";
 import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, rori, rorr, rotateRight, ShifterOutput, } from "./address-modes";
 
 
+@inline
 export function carryFrom(lhs: u32, rhs: u32): boolean {
     return rhs > ((u32(0xffffffff)) - lhs);
 }
 
+@inline
 export function isNegative(val: u32): boolean {
     return getBit(val, 31);
 }
+
+@inline
 export function underflowFrom(lhs: u32, rhs: u32): boolean {
     return rhs > lhs;
 }
+
+@inline
 export function signOverflowFrom(lhs: u32, rhs: u32): boolean {
     let signedLhs = i32(lhs);
     let signedRhs = i32(rhs);
@@ -71,19 +77,20 @@ export function ADDC(cpu: ARM7CPU): void {
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
     let sBit = getBit(instruction, 20);
-    let carryOut = cpu.flagVal(StatusFlags.CARRY);
+    let carryOut = u32(cpu.cpsr.c);
     let result = rnVal + shifterOut.operand + carryOut;
     cpu.writeRegister(rd, result);
     if (!sBit) {
         return;
     }
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOut.operand + carryOut) || carryFrom(shifterOut.operand, carryOut));
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOut.operand + carryOut) || signOverflowFrom(shifterOut.operand, carryOut));
+
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = carryFrom(rnVal, shifterOut.operand + carryOut) || carryFrom(shifterOut.operand, carryOut);
+        cpu.cpsr.v = signOverflowFrom(rnVal, shifterOut.operand + carryOut) || signOverflowFrom(shifterOut.operand, carryOut);
     }
 
 }
@@ -105,12 +112,12 @@ export function ADD(cpu: ARM7CPU): void {
     }
 
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOut.operand));
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOut.operand));
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = carryFrom(rnVal, shifterOut.operand);
+        cpu.cpsr.v = signOverflowFrom(rnVal, shifterOut.operand);
     }
 
 }
@@ -135,11 +142,11 @@ export function AND(cpu: ARM7CPU): void {
     }
 
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0 ? false : true);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
 
 }
@@ -162,11 +169,11 @@ export function BIC(cpu: ARM7CPU): void {
     }
 
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 0 ? false : true);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
 
 }
@@ -180,10 +187,11 @@ export function CMN(cpu: ARM7CPU): void {
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
     let result = rnVal + shifterOutput.operand;
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, carryFrom(rnVal, shifterOutput.operand));
-    cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(rnVal, shifterOutput.operand));
+
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = carryFrom(rnVal, shifterOutput.operand);
+    cpu.cpsr.v = signOverflowFrom(rnVal, shifterOutput.operand);
 
 }
 
@@ -197,10 +205,10 @@ export function CMP(cpu: ARM7CPU): void {
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
     let result = rnVal - shifterOutput.operand;
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand));
-    cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(i32(rnVal), i32(shifterOutput.operand)));
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = !underflowFrom(rnVal, shifterOutput.operand);
+    cpu.cpsr.v = subSignOverflow(i32(rnVal), i32(shifterOutput.operand));
 
 }
 
@@ -243,11 +251,11 @@ export function EOR(cpu: ARM7CPU): void {
         return
     }
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut == 1 ? true : false);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
 
 }
@@ -256,7 +264,7 @@ export function EOR(cpu: ARM7CPU): void {
 
 export function MOV(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
+    //  trace("PC", 1, cpu.readRegister(15));
     let shifterOutput = deduceAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let sBit = getBit(cpu.currentInstruction, 20);
@@ -266,13 +274,13 @@ export function MOV(cpu: ARM7CPU): void {
         return;
     }
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(shifterOutput.operand, 31));
-        cpu.setFlag(StatusFlags.ZERO, shifterOutput.operand == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+        cpu.cpsr.n = isNegative(shifterOutput.operand);
+        cpu.cpsr.z = shifterOutput.operand == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
-
+    cpu.prefetch();
 }
 
 
@@ -281,9 +289,9 @@ export function MRS(cpu: ARM7CPU): void {
     cpu.prefetch();
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (getBit(cpu.currentInstruction, 22)) {
-        cpu.writeRegister(rd, cpu.SPSR);
+        cpu.writeRegister(rd, cpu.spsr.val);
     } else {
-        cpu.writeRegister(rd, cpu.CPSR);
+        cpu.writeRegister(rd, cpu.cpsr.val);
     }
 }
 
@@ -302,72 +310,55 @@ export function MSR(cpu: ARM7CPU): void {
     } else {
         msrOP = cpu.readRegister(getBits(cpu.currentInstruction, 3, 0));
     }
-
+    let newVal: u32 = 0;
+    trace('msr op', 1, msrOP);
     if (!Rbit) {
-
-        let newcspr = cpu.CPSR;
-        if (getBit(fieldMask, 3)) {
-            let mask = getBits(msrOP, 31, 24);
-            mask = mask << 24;
-            let maskInvert = u32(0xff) << 24;
-            maskInvert = ~maskInvert;
-            newcspr = (newcspr & maskInvert) | mask;
-        }
-        if (cpu.mode == CPU_MODES.USR || cpu.mode == CPU_MODES.SYS) {
-            cpu.CPSR = newcspr;
-            return;
-        }
-        if (getBit(fieldMask, 0)) {
-            let mask = msrOP & 0xf;
-            newcspr = newcspr & mask;
-        }
-
-        if (getBit(fieldMask, 1)) {
-            let mask = getBits(msrOP, 15, 8);
-            mask = mask << 8;
-            let maskInvert = u32(0xff) << 8;
-            maskInvert = ~maskInvert
-            newcspr = (newcspr & maskInvert) | mask;
-        }
-
-        if (getBit(fieldMask, 2)) {
-            let mask = getBits(msrOP, 23, 16);
-            mask = mask << 16;
-            let maskInvert = u32(0xff) << 16;
-            maskInvert = ~maskInvert
-            newcspr = (newcspr & maskInvert) | mask;
-        }
-
-        cpu.CPSR = newcspr;
-
-
+        newVal = cpu.cpsr.val;
     } else {
-        if (cpu.mode == CPU_MODES.USR || cpu.mode == CPU_MODES.SYS) { }
-        if (getBit(fieldMask, 0)) {
-            cpu.SPSR &= (msrOP & 0xf);
-        }
-
-        if (getBit(fieldMask, 1)) {
-            let mask = ~(u32(0xff) << 8);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 8;
-            cpu.SPSR = mask;
-        }
-
-        if (getBit(fieldMask, 2)) {
-            let mask = ~(u32(0xff) << 16);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 16;
-            cpu.SPSR = mask;
-        }
-        if (getBit(fieldMask, 3)) {
-            let mask = ~(u32(0xff) << 24);
-            mask &= cpu.CPSR;
-            mask |= msrOP << 24;
-            cpu.SPSR = mask;
-        }
+        newVal = cpu.spsr.val;
     }
 
+    if (Rbit && (cpu.cpsr.mode == CPU_MODES.USR || cpu.cpsr.mode == CPU_MODES.SYS)) {
+        return;
+    }
+
+    if (getBit(fieldMask, 3)) {
+        let fields = (msrOP >>> 24) << 24;
+        let fieldsInv = ~(u32(0xff) << 24);
+        newVal = (newVal & fieldsInv) | fields;
+    }
+
+    trace("MSR", 1, newVal);
+    // Should only happen setting CPSR
+    if (cpu.cpsr.mode == CPU_MODES.USR) {
+        cpu.cpsr.val = newVal;
+        return;
+    }
+
+    if (getBit(fieldMask, 0)) {
+        let mask = msrOP & 0xff;
+        newVal = (newVal & ~(u32(0xff))) | mask;
+    }
+
+    trace("MSR", 1, newVal);
+
+    if (getBit(fieldMask, 1)) {
+        let fields = ((msrOP >>> 8) & 0xff) << 8;
+        let fieldsInv = ~(u32(0xff) << 8);
+        newVal = (newVal & fieldsInv) | fields;
+    }
+
+    if (getBit(fieldMask, 2)) {
+        let fields = ((msrOP >>> 16) & 0x7f) << 16;
+        let fieldsInv = ~(u32(0x7f) << 16);
+        newVal = (newVal & fieldsInv) | fields;
+    }
+
+    if (!Rbit) {
+        cpu.cpsr.val = newVal;
+    } else {
+        cpu.spsr.val = newVal;
+    }
 }
 
 
@@ -383,15 +374,14 @@ export function MVN(cpu: ARM7CPU): void {
     if (!sBit) {
         return;
     }
+
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
-
-
 }
 
 export function ORR(cpu: ARM7CPU): void {
@@ -410,15 +400,14 @@ export function ORR(cpu: ARM7CPU): void {
     if (!sBit) {
         return;
     }
-
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
+
 
 }
 
@@ -438,12 +427,12 @@ export function RSB(cpu: ARM7CPU): void {
     }
 
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal))
-        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, <i32>rnVal))
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = !underflowFrom(shifterOutput.operand, rnVal);
+        cpu.cpsr.v = subSignOverflow(<i32>shifterOutput.operand, <i32>rnVal);
     }
 
 }
@@ -456,22 +445,21 @@ export function RSC(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
-    let notC = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
+    let notC = u32(!cpu.cpsr.c);
     let rnVal = cpu.readRegister(rn);
-    let result = shifterOutput.operand - (rnVal + notC);
+    let result = shifterOutput.operand - rnVal - notC;
     cpu.writeRegister(rd, result);
 
     if (!sBit) {
         return;
     }
-
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(shifterOutput.operand, rnVal + notC))
-        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>shifterOutput.operand, i32(rnVal + notC)))
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = u64(shifterOutput.operand) >= (u64(rnVal) + u64(notC));
+        cpu.cpsr.v = subSignOverflow(<i32>shifterOutput.operand, <i32>rnVal);
     }
 
 }
@@ -490,14 +478,13 @@ export function SUB(cpu: ARM7CPU): void {
     if (!sBit) {
         return;
     }
-
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, (result == 0));
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(rnVal, shifterOutput.operand))
-        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand))
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = !underflowFrom(rnVal, shifterOutput.operand);
+        cpu.cpsr.v = subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand);
     }
 
 }
@@ -510,7 +497,7 @@ export function SBC(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let sBit = getBit(cpu.currentInstruction, 20);
-    let notC = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
+    let notC = u32(!cpu.cpsr.c);
     let rnVal = cpu.readRegister(rn);
     let result = rnVal - shifterOutput.operand - notC;
     cpu.writeRegister(rd, result);
@@ -520,19 +507,14 @@ export function SBC(cpu: ARM7CPU): void {
     }
 
     if (rd == 15) {
-        cpu.CPSR = cpu.SPSR;
+        cpu.cpsr.val = cpu.spsr.val;
     } else {
-
-        cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
         let tempRes = rnVal - shifterOutput.operand;
-        let underFlow = underflowFrom(rnVal, shifterOutput.operand) ||
-            underflowFrom(tempRes, notC);
-        cpu.setFlag(StatusFlags.CARRY, !underFlow);
-        cpu.setFlag(StatusFlags.OVERFLOW,
-            subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand)
-            || subSignOverflow(<i32>tempRes, <i32>notC)
-        )
+        cpu.cpsr.c = u64(rnVal) >= (u64(shifterOutput.operand) + u64(notC));
+        cpu.cpsr.v = subSignOverflow(<i32>rnVal, <i32>shifterOutput.operand) ||
+            subSignOverflow(<i32>tempRes, <i32>notC);
     }
 
 }
@@ -544,9 +526,9 @@ export function TEQ(cpu: ARM7CPU): void {
 
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let result = cpu.readRegister(rn) ^ shifterOutput.operand;
-    cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = shifterOutput.shifterOut != 0;
 
 }
 
@@ -557,9 +539,9 @@ export function TST(cpu: ARM7CPU): void {
 
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let result = cpu.readRegister(rn) & shifterOutput.operand;
-    cpu.setFlag(StatusFlags.NEGATIVE, getBit(result, 31));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOutput.shifterOut != 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = shifterOutput.shifterOut != 0;
 
 }
 

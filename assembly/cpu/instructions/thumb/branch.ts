@@ -64,7 +64,7 @@ export function BLBLX(cpu: ARM7CPU): void {
         let lr = cpu.readRegister(14);
         let pc = cpu.readRegister(15);
         cpu.writeRegister(15, lr + offset);
-        cpu.writeRegister(14, pc - 2);
+        cpu.writeRegister(14, (pc - 2) | 1);
     }
 }
 
@@ -73,7 +73,7 @@ export function BX(cpu: ARM7CPU): void {
     let h2Bit = (instruction >>> 6) & 0x1;
     let rm = (h2Bit << 3) | ((instruction >> 3) & 0x7);
     let rmVal = cpu.readRegister(rm);
-    trace("BX ADDR", 2, rm, rmVal);
-    cpu.setFlag(StatusFlags.THUMB_MODE, (rmVal & 0x1) != 0);
+    // trace("BX ADDR", 2, rm, rmVal);
+    cpu.cpsr.thumb = (rmVal & 0x1) != 0;
     cpu.writeRegister(15, rmVal & 0xFFFFFFFE);
 }

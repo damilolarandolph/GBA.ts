@@ -22,7 +22,7 @@ export function dataProcRegister(cpu: ARM7CPU): ShifterOutput {
     let regNo = u32(getBits(instruction, 3, 0));
     let output: ShifterOutput = {
         operand: cpu.readRegister(regNo),
-        shifterOut: cpu.flagVal(StatusFlags.CARRY)
+        shifterOut: cpu.cpsr.c ? 1 : 0
     }
     return output;
 }
@@ -110,7 +110,7 @@ export function rorr(instruction: u32, cpu: ARM7CPU): ShifterOutput {
 
     if ((rsVal & 0xff) == 0) {
         let operand = rmVal;
-        let shifterOut = cpu.flagVal(StatusFlags.CARRY);
+        let shifterOut = cpu.cpsr.c ? 1 : 0;
         return { operand, shifterOut };
     }
 
@@ -127,7 +127,7 @@ export function rorr(instruction: u32, cpu: ARM7CPU): ShifterOutput {
 }
 
 export function rrx(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
-    let cFlag = cpu.isFlag(StatusFlags.CARRY) ? u32(1) : u32(0);
+    let cFlag = cpu.cpsr.c ? u32(1) : u32(0);
     let result = u32(cFlag << 31) | (amount >> 1);
     let operand = result;
     let shifterOut = u32(getBit(bits, 0));
@@ -142,10 +142,10 @@ export function asr(bits: u32, amount: u32, immediate: boolean, cpu: ARM7CPU): S
     if (amount == 0 && immediate) {
         amount = 32;
     }
-    let amountTrunc = amount &= 0xff;
+    let amountTrunc: u32 = amount &= 0xff;
     if (amountTrunc == 0) {
         let operand = bits;
-        let shifterOut = cpu.flagVal(StatusFlags.CARRY);
+        let shifterOut = u32(cpu.cpsr.c);
 
         return { operand, shifterOut };
     }
@@ -194,7 +194,7 @@ export function lsr(bits: u32, amount: u32, isImmediate: boolean, cpu: ARM7CPU):
 
     if (amountTrunc == 0) {
         operand = bits;
-        shifterOut = cpu.flagVal(StatusFlags.CARRY);
+        shifterOut = u32(cpu.cpsr.c);
         return { operand, shifterOut };
     }
 
@@ -224,7 +224,7 @@ export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     //   trace("LSL", 2, bits, amount);
     if (amountTrunc == 0) {
         operand = bits;
-        shifterOut = cpu.flagVal(StatusFlags.CARRY);
+        shifterOut = u32(cpu.cpsr.c);
 
         //      trace("LSL1", 2, operand, shifterOut);
         return { operand, shifterOut };
@@ -258,7 +258,7 @@ export function rotateRight(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput
 
     if (amount == 0) {
         operand = result;
-        shifterOut = cpu.flagVal(StatusFlags.CARRY);
+        shifterOut = u32(cpu.cpsr.c);
         return { operand, shifterOut };
     }
     operand = result;

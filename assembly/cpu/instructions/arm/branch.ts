@@ -30,6 +30,6 @@ export function BX(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let rm = getBits(instruction, 3, 0);
     let rmVal = cpu.readRegister(rm);
-    cpu.setFlag(StatusFlags.THUMB_MODE, getBit(rmVal, 0));
+    cpu.cpsr.thumb = getBit(rmVal, 0);
     cpu.writeRegister(15, rmVal & 0xFFFFFFFE)
 }

@@ -128,10 +128,10 @@ export function ADD(cpu: ARM7CPU): void {
 
     cpu.writeRegister(format.destination, result);
     if (setFlags) {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, carryFrom(format.op1, format.op2));
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(format.op1, format.op2));
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = carryFrom(format.op1, format.op2);
+        cpu.cpsr.v = signOverflowFrom(format.op1, format.op2);
     }
 
 
@@ -141,15 +141,15 @@ export function ADD(cpu: ARM7CPU): void {
 export function ADC(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
 
-    if (format.format == 5) {
-        let carry = cpu.flagVal(StatusFlags.CARRY);
-        let result = format.op1 + format.op2 + carry;
-        cpu.writeRegister(format.destination, result);
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, carryFrom(format.op1, format.op2 + carry) || carryFrom(format.op2, carry));
-        cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(format.op1, format.op2 + carry) || signOverflowFrom(format.op2, carry));
-    }
+    let carry = u32(cpu.cpsr.c);
+    let result = format.op1 + format.op2 + carry;
+    cpu.writeRegister(format.destination, result);
+
+
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = carryFrom(format.op1, format.op2 + carry) || carryFrom(format.op2, carry);
+    cpu.cpsr.v = signOverflowFrom(format.op1, format.op2 + carry) || signOverflowFrom(format.op2, carry);
 }
 
 export function SUB(cpu: ARM7CPU): void {
@@ -167,74 +167,71 @@ export function SUB(cpu: ARM7CPU): void {
 
     cpu.writeRegister(format.destination, result);
     if (setFlags) {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        cpu.setFlag(StatusFlags.CARRY, !underflowFrom(format.op1, format.op2));
-        cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(format.op1, format.op2));
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
+        cpu.cpsr.c = !underflowFrom(format.op1, format.op2);
+        cpu.cpsr.v = subSignOverflow(format.op1, format.op2);
     }
 
 }
 
 export function SBC(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
-    let carry: u32 = cpu.isFlag(StatusFlags.CARRY) ? 0 : 1;
-    if (format.format == 5) {
-        let result = format.op1 - format.op2 - carry;
-        cpu.writeRegister(format.destination, result);
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
-        let tempRes = format.op1 - format.op2;
-        let underflow = underflowFrom(format.op1, format.op2) ||
-            underflowFrom(tempRes, carry);
-        cpu.setFlag(StatusFlags.CARRY, !underflow);
-        cpu.setFlag(StatusFlags.OVERFLOW,
-            subSignOverflow(<i32>format.op1, <i32>format.op2) ||
-            subSignOverflow(<i32>tempRes, <i32>carry)
-        );
-    }
+    let carry: u32 = u32(!cpu.cpsr.c);
+    let result = format.op1 - format.op2 - carry;
+    cpu.writeRegister(format.destination, result);
+
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    let tempRes = format.op1 - format.op2;
+    let underflow = underflowFrom(format.op1, format.op2) ||
+        underflowFrom(tempRes, carry);
+    cpu.cpsr.c = u64(format.op1) >= (u64(format.op2) + u64(carry));
+    cpu.cpsr.v = subSignOverflow(<i32>format.op1, <i32>format.op2) ||
+        subSignOverflow(<i32>tempRes, <i32>carry);
 }
 
 export function AND(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 & format.op2;
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function BIC(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 & (~format.op2);
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function CMN(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 + format.op2;
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, carryFrom(format.op1, format.op2));
-    cpu.setFlag(StatusFlags.OVERFLOW, signOverflowFrom(format.op1, format.op2));
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = carryFrom(format.op1, format.op2);
+    cpu.cpsr.v = signOverflowFrom(format.op1, format.op2);
 }
 
 export function CMP(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 - format.op2;
 
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, !underflowFrom(format.op1, format.op2));
-    cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(format.op1, format.op2));
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = !underflowFrom(format.op1, format.op2);
+    cpu.cpsr.v = subSignOverflow(format.op1, format.op2);
 }
 
 export function EOR(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 ^ format.op2;
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function MOV(cpu: ARM7CPU): void {
@@ -248,8 +245,8 @@ export function MOV(cpu: ARM7CPU): void {
 
     cpu.writeRegister(format.destination, result);
     if (setFlags) {
-        cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-        cpu.setFlag(StatusFlags.ZERO, result == 0);
+        cpu.cpsr.n = isNegative(result);
+        cpu.cpsr.z = result == 0;
     }
 }
 
@@ -258,8 +255,8 @@ export function MUL(cpu: ARM7CPU): void {
     let result: u32 = format.op1 * format.op2;
     cpu.addCycles(2);
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function MVN(cpu: ARM7CPU): void {
@@ -267,33 +264,33 @@ export function MVN(cpu: ARM7CPU): void {
     let result: u32 = ~(format.op2);
 
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function NEG(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = u32(0 - i32(format.op2));
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
-    cpu.setFlag(StatusFlags.CARRY, !underflowFrom(0, format.op2));
-    cpu.setFlag(StatusFlags.OVERFLOW, subSignOverflow(0, <i32>format.op2));
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
+    cpu.cpsr.c = !underflowFrom(0, format.op2);
+    cpu.cpsr.v = subSignOverflow(0, <i32>format.op2);
 }
 
 export function ORR(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 | format.op2;
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function TST(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let result = format.op1 & format.op2;
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
 
 export function ASR(cpu: ARM7CPU): void {
@@ -307,22 +304,22 @@ export function ASR(cpu: ARM7CPU): void {
     }
 
     cpu.writeRegister(format.destination, shifterOut.operand);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(shifterOut.operand));
-    cpu.setFlag(StatusFlags.ZERO, shifterOut.operand == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOut.shifterOut == 1);
+    cpu.cpsr.n = isNegative(shifterOut.operand);
+    cpu.cpsr.z = shifterOut.operand == 0;
+    cpu.cpsr.c = shifterOut.shifterOut != 0;
 }
 
 export function LSL(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let shifterOut: ShifterOutput = lsl(format.op1, format.op2, cpu);
 
-    trace("LSL", 3, format.op1, format.op2, shifterOut.operand);
+    // trace("LSL", 3, format.op1, format.op2, shifterOut.operand);
 
 
     cpu.writeRegister(format.destination, shifterOut.operand);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(shifterOut.operand));
-    cpu.setFlag(StatusFlags.ZERO, shifterOut.operand == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOut.shifterOut == 1);
+    cpu.cpsr.n = isNegative(shifterOut.operand);
+    cpu.cpsr.z = shifterOut.operand == 0;
+    cpu.cpsr.c = shifterOut.shifterOut != 0;
 }
 
 export function LSR(cpu: ARM7CPU): void {
@@ -337,9 +334,9 @@ export function LSR(cpu: ARM7CPU): void {
     }
 
     cpu.writeRegister(format.destination, shifterOut.operand);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(shifterOut.operand));
-    cpu.setFlag(StatusFlags.ZERO, shifterOut.operand == 0);
-    cpu.setFlag(StatusFlags.CARRY, shifterOut.shifterOut == 1);
+    cpu.cpsr.n = isNegative(shifterOut.operand);
+    cpu.cpsr.z = shifterOut.operand == 0;
+    cpu.cpsr.c = shifterOut.shifterOut != 0;
 }
 
 
@@ -352,16 +349,16 @@ export function ROR(cpu: ARM7CPU): void {
     }
     else if ((format.op2 & 0x1f) == 0) {
         result = format.op1;
-        cpu.setFlag(StatusFlags.CARRY, isNegative(format.op1));
+        cpu.cpsr.c = isNegative(format.op1);
     } else {
         let right = format.op1 >>> u32(format.op2 & 0x1f);
         let left = format.op1 << (32 - u32(format.op2 & 0x1f));
-        cpu.setFlag(StatusFlags.CARRY, getBit(format.op1, u32(format.op2 & 0x1f) - 1));
+        cpu.cpsr.c = getBit(format.op1, u32(format.op2 & 0x1f) - 1);
         result = right | left;
     }
 
 
     cpu.writeRegister(format.destination, result);
-    cpu.setFlag(StatusFlags.NEGATIVE, isNegative(result));
-    cpu.setFlag(StatusFlags.ZERO, result == 0);
+    cpu.cpsr.n = isNegative(result);
+    cpu.cpsr.z = result == 0;
 }
