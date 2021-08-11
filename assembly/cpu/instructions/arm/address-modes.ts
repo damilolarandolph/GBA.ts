@@ -8,6 +8,8 @@ import { testCondition } from "../instructions";
     shifterOut: u32;
 }
 
+const output: ShifterOutput = { operand: 0, shifterOut: 0 };
+
 export { ShifterOutput };
 //export type dataProcFunc = (instruction: u32, cpu: ARM7CPU) => [number, boolean];
 
@@ -97,7 +99,8 @@ export function rori(cpu: ARM7CPU): ShifterOutput {
 
     let operand = (rmVal << (32 - shiftImm)) | rmVal >> shiftImm;
     let shifterOut = u32(getBit(rmVal, shiftImm - 1));
-    let output: ShifterOutput = { operand: operand, shifterOut: shifterOut };
+    output.operand = operand;
+    output.shifterOut = shifterOut;
     return output;
 }
 
@@ -111,27 +114,31 @@ export function rorr(instruction: u32, cpu: ARM7CPU): ShifterOutput {
     if ((rsVal & 0xff) == 0) {
         let operand = rmVal;
         let shifterOut = cpu.cpsr.c ? 1 : 0;
-        return { operand, shifterOut };
+        output.operand = operand;
+        output.shifterOut = shifterOut;
     }
 
-    if ((rsVal & 0x1f) == 0) {
+    else if ((rsVal & 0x1f) == 0) {
         let operand = rmVal;
         let shifterOut = u32(getBit(rmVal, 31));
-        return { operand, shifterOut }
+        output.operand = operand;
+        output.shifterOut = shifterOut;
+    } else {
+        let operand = (rmVal << (32 - rsVal)) | rmVal >> rsVal;
+        let shifterOut = u32(getBit(rmVal, u32(rsVal & 0x1f) - 1));
+        output.operand = operand;
+        output.shifterOut = shifterOut;
     }
-
-    let operand = (rmVal << (32 - rsVal)) | rmVal >> rsVal;
-    let shifterOut = u32(getBit(rmVal, u32(rsVal & 0x1f) - 1));
-    return { operand, shifterOut };
+    return output;
 
 }
 
 export function rrx(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     let cFlag = cpu.cpsr.c ? u32(1) : u32(0);
     let result = u32(cFlag << 31) | (amount >> 1);
-    let operand = result;
-    let shifterOut = u32(getBit(bits, 0));
-    return { operand, shifterOut };
+    output.operand = result;
+    output.shifterOut = u32(getBit(bits, 0));
+    return output;
 }
 
 
@@ -144,126 +151,99 @@ export function asr(bits: u32, amount: u32, immediate: boolean, cpu: ARM7CPU): S
     }
     let amountTrunc: u32 = amount &= 0xff;
     if (amountTrunc == 0) {
-        let operand = bits;
-        let shifterOut = u32(cpu.cpsr.c);
-
-        return { operand, shifterOut };
+        output.operand = bits;
+        output.shifterOut = u32(cpu.cpsr.c);
     }
 
-    if (amountTrunc < 32) {
+    else if (amountTrunc < 32) {
         let result = u32(<i32>bits >> amountTrunc);
         let carryOut = getBit(bits, amountTrunc - 1);
-        let operand = result;
-        let shifterOut = u32(carryOut);
-
-        return { operand, shifterOut };
+        output.operand = result;
+        output.shifterOut = u32(carryOut);
     }
 
-    if (!getBit(bits, 31)) {
-        let operand = 0;
-        let shifterOut = getBit(bits, 31) ? 1 : 0;
-
-        return { operand, shifterOut };
+    else if (!getBit(bits, 31)) {
+        output.operand = 0;
+        output.shifterOut = getBit(bits, 31) ? 1 : 0;
+    } else {
+        output.operand = 0xFFFFFFFF;
+        output.shifterOut = getBit(bits, 31) ? 1 : 0;
     }
-    let operand = 0xFFFFFFFF;
-    let shifterOut = getBit(bits, 31) ? 1 : 0;
-    return { operand, shifterOut };
+    return output;
 }
 
 
 //Logical shift right
 export function lsr(bits: u32, amount: u32, isImmediate: boolean, cpu: ARM7CPU): ShifterOutput {
-    let operand: u32;
-    let shifterOut: u32;
-
 
     if (isImmediate) {
         if (amount == 0) {
-            return { operand: 0, shifterOut: getBit(bits, 31) ? 1 : 0 };
+            output.operand = 0
+            output.shifterOut = u32(getBit(bits, 31));
         } else {
 
-            return {
-                operand: bits >>> amount,
-                shifterOut: getBit(bits, amount - 1) ? 1 : 0
-            }
+            output.operand = bits >>> amount;
+            output.shifterOut = u32(getBit(bits, amount - 1))
 
         }
+
+        return output;
     }
 
     let amountTrunc = amount & 0xff;
 
     if (amountTrunc == 0) {
-        operand = bits;
-        shifterOut = u32(cpu.cpsr.c);
-        return { operand, shifterOut };
+        output.operand = bits;
+        output.shifterOut = u32(cpu.cpsr.c);
     }
 
-    if (amountTrunc < 32) {
+    else if (amountTrunc < 32) {
         let shiftResult = bits >>> amountTrunc
         let carryOut = getBit(bits, u32(amountTrunc) - 1);
-        operand = shiftResult;
-        return { operand, shifterOut: carryOut ? 1 : 0 };
+        output.operand = shiftResult;
+        output.shifterOut = u32(carryOut);
     }
 
-    if (amountTrunc == 32) {
-        operand = 0;
-        shifterOut = u32(getBit(bits, 31));
-        return { operand, shifterOut };
+    else if (amountTrunc == 32) {
+        output.operand = 0;
+        output.shifterOut = u32(getBit(bits, 31));
+    } else {
+        output.operand = output.shifterOut = 0;
     }
-    return { operand: 0, shifterOut: 0 }
+    return output;
 }
 
 // Logical shift left
 export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
-
-    let operand: u32;
-    let shifterOut: u32;
-
     let amountTrunc = amount & 0xff;
 
-    //   trace("LSL", 2, bits, amount);
     if (amountTrunc == 0) {
-        operand = bits;
-        shifterOut = u32(cpu.cpsr.c);
-
-        //      trace("LSL1", 2, operand, shifterOut);
-        return { operand, shifterOut };
-    }
-
-    if (amountTrunc < 32) {
+        output.operand = bits;
+        output.shifterOut = u32(cpu.cpsr.c);
+    } else if (amountTrunc < 32) {
         let carryout = getBit(bits, u32(32 - amountTrunc));
-        operand = bits << u32(amountTrunc);
-        shifterOut = carryout ? 1 : 0;
-        //      trace("LSL2", 2, operand, shifterOut);
-        return { operand, shifterOut: carryout ? 1 : 0 };
+        output.operand = bits << u32(amountTrunc);
+        output.shifterOut = u32(carryout);
+    } else if (amountTrunc == 32) {
+        output.operand = 0;
+        output.shifterOut = u32((bits & 0x1) != 0);
+    } else {
+        output.operand = output.shifterOut = 0;
     }
-
-    if (amountTrunc == 32) {
-        operand = 0;
-        shifterOut = (bits & 0x1) != 0 ? 1 : 0;
-
-        //      trace("LSL3", 2, operand, shifterOut);
-        return { operand, shifterOut };
-    }
-
-
-    // trace("LSL4", 2, 0, 0);
-    return { operand: 0, shifterOut: 0 }
+    return output;
 }
 
 export function rotateRight(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
     let result = (bits << u32(32 - amount)) | bits >>> u32(amount);
-    let operand: u32;
-    let shifterOut: u32;
 
     if (amount == 0) {
-        operand = result;
-        shifterOut = u32(cpu.cpsr.c);
-        return { operand, shifterOut };
+        output.operand = result;
+        output.shifterOut = u32(cpu.cpsr.c);
+    } else {
+        output.operand = result;
+        output.shifterOut = u32(getBit(result, 31))
     }
-    operand = result;
-    shifterOut = u32(getBit(result, 31))
-    return { operand, shifterOut };
+    return output;
 }
 
 
@@ -514,6 +494,8 @@ export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): u32 {
     endAddress: u32;
 }
 
+const multiOutput: MultipleAddrOutput = { startAddress: 0, endAddress: 0 };
+
 export { MultipleAddrOutput };
 
 
@@ -529,7 +511,9 @@ export function ldmIncrAfter(cpu: ARM7CPU): MultipleAddrOutput {
         cpu.writeRegister(rn, endAddress + 4);
     }
 
-    return { startAddress, endAddress };
+    multiOutput.startAddress = startAddress;
+    multiOutput.endAddress = endAddress;
+    return multiOutput;
 }
 
 export function ldmIncrBefore(cpu: ARM7CPU): MultipleAddrOutput {
@@ -542,8 +526,9 @@ export function ldmIncrBefore(cpu: ARM7CPU): MultipleAddrOutput {
     if (testCondition(cpu) && getBit(instruction, 21)) {
         cpu.writeRegister(rn, endAddress);
     }
-
-    return { startAddress, endAddress }
+    multiOutput.startAddress = startAddress;
+    multiOutput.endAddress = endAddress;
+    return multiOutput;
 }
 
 export function ldmDecrAfter(cpu: ARM7CPU): MultipleAddrOutput {
@@ -557,7 +542,9 @@ export function ldmDecrAfter(cpu: ARM7CPU): MultipleAddrOutput {
         cpu.writeRegister(rn, startAddress - 4);
     }
 
-    return { startAddress, endAddress }
+    multiOutput.startAddress = startAddress;
+    multiOutput.endAddress = endAddress;
+    return multiOutput;
 }
 
 export function ldmDecrBefor(cpu: ARM7CPU): MultipleAddrOutput {
@@ -575,5 +562,7 @@ export function ldmDecrBefor(cpu: ARM7CPU): MultipleAddrOutput {
         cpu.writeRegister(rn, startAddress);
     }
 
-    return { startAddress, endAddress }
+    multiOutput.startAddress = startAddress;
+    multiOutput.endAddress = endAddress;
+    return multiOutput;
 }

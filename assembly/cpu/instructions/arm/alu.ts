@@ -1,7 +1,5 @@
 import { getBit, getBits } from "../../../utils/bits";
-import PaletteRam from "../../../video/palette-ram";
 import { ARM7CPU, CPU_MODES, StatusFlags } from "../../cpu";
-import { testCondition } from "../instructions";
 import { asri, asrr, dataProcImmediate, lsli, lslr, lsri, lsrr, rori, rorr, rotateRight, ShifterOutput, } from "./address-modes";
 
 
@@ -264,7 +262,6 @@ export function EOR(cpu: ARM7CPU): void {
 
 export function MOV(cpu: ARM7CPU): void {
 
-    //  trace("PC", 1, cpu.readRegister(15));
     let shifterOutput = deduceAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let sBit = getBit(cpu.currentInstruction, 20);
@@ -311,7 +308,6 @@ export function MSR(cpu: ARM7CPU): void {
         msrOP = cpu.readRegister(getBits(cpu.currentInstruction, 3, 0));
     }
     let newVal: u32 = 0;
-    trace('msr op', 1, msrOP);
     if (!Rbit) {
         newVal = cpu.cpsr.val;
     } else {
@@ -328,7 +324,6 @@ export function MSR(cpu: ARM7CPU): void {
         newVal = (newVal & fieldsInv) | fields;
     }
 
-    trace("MSR", 1, newVal);
     // Should only happen setting CPSR
     if (cpu.cpsr.mode == CPU_MODES.USR) {
         cpu.cpsr.val = newVal;
@@ -340,7 +335,6 @@ export function MSR(cpu: ARM7CPU): void {
         newVal = (newVal & ~(u32(0xff))) | mask;
     }
 
-    trace("MSR", 1, newVal);
 
     if (getBit(fieldMask, 1)) {
         let fields = ((msrOP >>> 8) & 0xff) << 8;
