@@ -29,7 +29,6 @@ export class GBA {
     private scheduler: Scheduler = new Scheduler();
     private interruptManager: InterruptManager = new InterruptManager(this.scheduler);
     private keyPad: Keypad = new Keypad(this.interruptManager);
-    private frameMultiplier: u64 = 1;
 
     constructor() {
         this.VRAM = new VRAM(this.videoRegisters);

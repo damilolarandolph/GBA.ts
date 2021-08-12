@@ -1,17 +1,9 @@
 
 import { GBA } from "./gba";
+import { KEYS } from "./keypad";
 
 
-export var gba: GBA = new GBA();
-export { GBA };
-export { VideoController } from "./video/video-controller";
-export { Keypad } from './keypad';
-let arry: StaticArray<u8> = new StaticArray<u8>(4);
-arry[0] = 10;
-arry[1] = 20;
-arry[2] = 30;
-
-
+export const gba = new GBA();
 
 export namespace console {
   export declare function log(msg: string): void;
@@ -45,9 +37,24 @@ export namespace callbacks {
   export declare function newFrame(arrayPointer: usize): void;
 }
 
-export function getGBA(): GBA {
-  return gba;
+
+//
+export function getRomArray(): Uint8Array {
+  return gba.getGamePAK();
 }
+
+export function runFrame(): void {
+  gba.runFrame();
+}
+
+export function pressKey(id: KEYS): void {
+  gba.getKeyPad().pressKey(id);
+}
+
+export function releaseKey(id: KEYS): void {
+  gba.getKeyPad().pressKey(id);
+}
+
 
 
 
