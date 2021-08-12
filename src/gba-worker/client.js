@@ -1,6 +1,7 @@
 import * as loader from '@assemblyscript/loader';
 import { DOMTimeStamp } from 'webidl-conversions';
 import { messages } from './bridge';
+import { Keys } from './worker';
 
 
 export default class ClientEmulatorBridge {
@@ -23,6 +24,8 @@ export default class ClientEmulatorBridge {
 
     constructor() {
         this.#worker = new Worker(new URL('./worker.js', import.meta.url));
+        addEventListener('keydown', this.pressKeyCallback.bind(this));
+        addEventListener('keyup', this.releaseKeyCallback.bind(this));
     }
 
 
@@ -46,6 +49,14 @@ export default class ClientEmulatorBridge {
         }
 
     }
+    #keyMap = {
+        "ArrowDown": Keys.DOWN,
+        "ArrowUp": Keys.UP,
+        "ArrowLeft": Keys.LEFT,
+        "ArrowRight": Keys.RIGHT,
+        "Enter": Keys.START,
+        "Escape": Keys.SELECT,
+    }
 
 
     /**
@@ -59,6 +70,25 @@ export default class ClientEmulatorBridge {
 
     pause() {
         this.#worker.postMessage({ type: messages.PAUSE });
+    }
+    /**
+         * 
+         * @param {KeyboardEvent} keyboardEvent 
+         */
+    pressKeyCallback(keyboardEvent) {
+        if (this.#keyMap.hasOwnProperty(keyboardEvent.key)) {
+            this.#worker.postMessage({ type: messages.KEYDOWN, args: [this.#keyMap[keyboardEvent.key]] })
+        }
+    }
+
+    /**
+     * 
+     * @param {KeyboardEvent} keyboardEvent 
+     */
+    releaseKeyCallback(keyboardEvent) {
+        if (this.#keyMap.hasOwnProperty(keyboardEvent.key)) {
+            this.#worker.postMessage({ type: messages.KEYUP, args: [this.#keyMap[keyboardEvent.key]] });
+        }
     }
 
 }
@@ -81,8 +111,11 @@ class Renderer {
 
     #dirtyFrame = false;
 
+
+
     constructor() {
         this.#graphicsWorker = new Worker(new URL('./graphics-worker.js', import.meta.url));
+
     }
 
     play() {
@@ -116,6 +149,8 @@ class Renderer {
         this.#canvas = canvasEl;
         this.#context = this.#canvas.getContext('2d');
     }
+
+
 
 }
 

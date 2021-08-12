@@ -1,5 +1,5 @@
 import * as cpu from "./cpu/cpu";
-import InterruptManager from "./cpu/interrupt-manager";
+import { InterruptManager } from "./cpu/interrupt-manager";
 import { GamePak, cartData } from "./gamepak/gamepak";
 import { IOMap } from "./io/io-map";
 import BIOS from "./memory/BIOS";
@@ -12,6 +12,7 @@ import { VideoController } from "./video/video-controller";
 import { GPURegisters } from "./video/VideoUnitRegisters";
 export { cartData } from './gamepak/gamepak';
 import VRAM from "./video/vram";
+import { Keypad } from "./keypad";
 export class GBA {
     private cpu: cpu.ARM7CPU;
     private videoUnit: VideoController;
@@ -25,8 +26,10 @@ export class GBA {
     private WRAM2: WRAM2 = new WRAM2();
     private PaletteRam: PaletteRam = new PaletteRam();
     private BIOS: BIOS = new BIOS();
-    private interruptManager: InterruptManager = new InterruptManager();
     private scheduler: Scheduler = new Scheduler();
+    private interruptManager: InterruptManager = new InterruptManager(this.scheduler);
+    private keyPad: Keypad = new Keypad(this.interruptManager);
+    private frameMultiplier: u64 = 1;
 
     constructor() {
         this.VRAM = new VRAM(this.videoRegisters);
@@ -38,7 +41,9 @@ export class GBA {
             this.videoRegisters,
             this.scheduler
         );
-        this.IOMap = new IOMap(this.videoUnit);
+        this.IOMap = new IOMap(
+            this.videoUnit,
+            this.keyPad);
         this.systemMemory = new SystemMemory(
             this.BIOS,
             this.WRAM,
@@ -84,10 +89,23 @@ export class GBA {
     }
 
     step(): void {
-        this.cpu.tick();
+        if (this.scheduler.canProcess) {
+            this.scheduler.processEvents();
+        } else {
+            this.cpu.tick();
+        }
     }
 
+    runFrame(): void {
+        let startTime = this.scheduler.timeStamp;
+        while (this.scheduler.timeStamp - startTime <= 280896) {
+            this.step();
+        }
+    }
 
+    getKeyPad(): Keypad {
+        return this.keyPad;
+    }
     getCPU(): cpu.ARM7CPU {
         return this.cpu;
     }
