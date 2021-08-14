@@ -97,7 +97,7 @@ export function rori(cpu: ARM7CPU): ShifterOutput {
         return rrx(rmVal, shiftImm, cpu);
     }
 
-    let operand = (rmVal << (32 - shiftImm)) | rmVal >> shiftImm;
+    let operand = (rmVal << (32 - shiftImm)) | rmVal >>> shiftImm;
     let shifterOut = u32(getBit(rmVal, shiftImm - 1));
     output.operand = operand;
     output.shifterOut = shifterOut;
@@ -134,8 +134,8 @@ export function rorr(instruction: u32, cpu: ARM7CPU): ShifterOutput {
 }
 
 export function rrx(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
-    let cFlag = cpu.cpsr.c ? u32(1) : u32(0);
-    let result = u32(cFlag << 31) | (amount >> 1);
+    let cFlag = u32(cpu.cpsr.c);
+    let result = u32(cFlag << 31) | (bits >> 1);
     output.operand = result;
     output.shifterOut = u32(getBit(bits, 0));
     return output;
@@ -190,7 +190,7 @@ export function lsr(bits: u32, amount: u32, isImmediate: boolean, cpu: ARM7CPU):
         return output;
     }
 
-    let amountTrunc = amount & 0xff;
+    let amountTrunc: u32 = amount & 0xff;
 
     if (amountTrunc == 0) {
         output.operand = bits;
@@ -215,7 +215,7 @@ export function lsr(bits: u32, amount: u32, isImmediate: boolean, cpu: ARM7CPU):
 
 // Logical shift left
 export function lsl(bits: u32, amount: u32, cpu: ARM7CPU): ShifterOutput {
-    let amountTrunc = amount & 0xff;
+    let amountTrunc: u32 = amount & 0xff;
 
     if (amountTrunc == 0) {
         output.operand = bits;
