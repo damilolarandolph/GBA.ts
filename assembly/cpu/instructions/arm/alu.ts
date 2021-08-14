@@ -45,6 +45,7 @@ export function deduceAddressing(cpu: ARM7CPU): ShifterOutput {
 
     if (shiftRegFlag) {
         cpu.addCycles(1);
+        cpu.prefetch();
         if (shiftType == 0)
             return lslr(cpu);
         else if (shiftType == 1)
@@ -68,7 +69,6 @@ export function deduceAddressing(cpu: ARM7CPU): ShifterOutput {
 }
 
 export function ADDC(cpu: ARM7CPU): void {
-    cpu.prefetch();
     let shifterOut = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rd = getBits(instruction, 15, 12);
@@ -95,7 +95,6 @@ export function ADDC(cpu: ARM7CPU): void {
 
 export function ADD(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOut = deduceAddressing(cpu);
 
     let instruction = cpu.currentInstruction;
@@ -125,7 +124,6 @@ export function ADD(cpu: ARM7CPU): void {
 
 export function AND(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rd = getBits(instruction, 15, 12);
@@ -152,7 +150,6 @@ export function AND(cpu: ARM7CPU): void {
 
 export function BIC(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rd = getBits(instruction, 15, 12);
@@ -179,7 +176,6 @@ export function BIC(cpu: ARM7CPU): void {
 
 export function CMN(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
@@ -197,7 +193,6 @@ export function CMN(cpu: ARM7CPU): void {
 
 export function CMP(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
@@ -236,7 +231,6 @@ export function subSignOverflow(lhs: i32, rhs: i32): boolean {
 
 export function EOR(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let instruction = cpu.currentInstruction;
     let rd = getBits(instruction, 15, 12);
@@ -277,13 +271,11 @@ export function MOV(cpu: ARM7CPU): void {
         cpu.cpsr.z = shifterOutput.operand == 0;
         cpu.cpsr.c = shifterOutput.shifterOut != 0;
     }
-    cpu.prefetch();
 }
 
 
 export function MRS(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let rd = getBits(cpu.currentInstruction, 15, 12);
     if (getBit(cpu.currentInstruction, 22)) {
         cpu.writeRegister(rd, cpu.spsr.val);
@@ -294,7 +286,6 @@ export function MRS(cpu: ARM7CPU): void {
 
 export function MSR(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let Rbit = getBit(cpu.currentInstruction, 22);
     let fieldMask = getBits(cpu.currentInstruction, 19, 16);
 
@@ -358,7 +349,6 @@ export function MSR(cpu: ARM7CPU): void {
 
 export function MVN(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -380,7 +370,6 @@ export function MVN(cpu: ARM7CPU): void {
 
 export function ORR(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
 
@@ -407,7 +396,6 @@ export function ORR(cpu: ARM7CPU): void {
 
 export function RSB(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
@@ -433,7 +421,6 @@ export function RSB(cpu: ARM7CPU): void {
 
 export function RSC(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -460,7 +447,6 @@ export function RSC(cpu: ARM7CPU): void {
 
 export function SUB(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
@@ -485,7 +471,6 @@ export function SUB(cpu: ARM7CPU): void {
 
 export function SBC(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
     let rd = getBits(cpu.currentInstruction, 15, 12);
@@ -515,7 +500,6 @@ export function SBC(cpu: ARM7CPU): void {
 
 export function TEQ(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
     let rn = getBits(cpu.currentInstruction, 19, 16);
@@ -528,7 +512,6 @@ export function TEQ(cpu: ARM7CPU): void {
 
 export function TST(cpu: ARM7CPU): void {
 
-    cpu.prefetch();
     let shifterOutput = deduceAddressing(cpu);
 
     let rn = getBits(cpu.currentInstruction, 19, 16);
