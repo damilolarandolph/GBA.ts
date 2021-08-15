@@ -108,13 +108,20 @@ export function LDM(cpu: ARM7CPU): void {
 export function STM(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 15, 0);
-
     let currentAddress = multiAddrOutput.startAddress;
+    let lowest = 20;
+
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
             let regValue = cpu.readRegister(index);
-            cpu.write32(currentAddress, regValue);
+            if (index == multiAddrOutput.rn && i32(multiAddrOutput.rn) < lowest) {
+                regValue = multiAddrOutput.orginalRn;
+            }
+            cpu.write32(currentAddress & (~u32(3)), regValue);
             currentAddress += 4;
+            if (lowest > index) {
+                lowest = index;
+            }
         }
     }
 
@@ -145,6 +152,7 @@ export function STM2(cpu: ARM7CPU): void {
     let multiAddrOutput = deduceLDMAddressing(cpu);
     let regList = getBits(cpu.currentInstruction, 14, 0);
     let currentAddress = multiAddrOutput.startAddress;
+
     for (let index = 0; index < 15; ++index) {
         if (getBit(regList, index)) {
             let rnVal = cpu.readRegister(index, CPU_MODES.USR);
@@ -315,11 +323,13 @@ export function SWP(cpu: ARM7CPU): void {
     let rd = getBits(cpu.currentInstruction, 15, 12);
     let rn = getBits(cpu.currentInstruction, 19, 16);
     let rm = getBits(cpu.currentInstruction, 3, 0);
-    let lastBits = u32(cpu.readRegister(rn) & 0x3);
+    let address = cpu.readRegister(rn);
+    let alignedAddr = address & (~u32(3));
+    let lastBits = u32(address & 0x3);
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
-    let shifterOut = rotateRight(cpu.read32(cpu.readRegister(rn)), 8 * lastBits, cpu);
+    let shifterOut = rotateRight(cpu.read32(alignedAddr), 8 * lastBits, cpu);
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
-    cpu.write32(cpu.readRegister(rn), cpu.readRegister(rm))
+    cpu.write32(alignedAddr, cpu.readRegister(rm))
     cpu.addCycles(1);
     cpu.writeRegister(rd, shifterOut.operand);
 }
@@ -329,7 +339,7 @@ export function SWPB(cpu: ARM7CPU): void {
     let rm = getBits(cpu.currentInstruction, 3, 0);
 
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
-    let swpbVal = cpu.read8(cpu.readRegister(rn) & 0xff)
+    let swpbVal = cpu.read8(cpu.readRegister(rn));
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write8(cpu.readRegister(rn), u8(cpu.readRegister(rm) & 0xff))
     cpu.addCycles(1);

@@ -492,9 +492,11 @@ export function miscImmedOffsetPostIndexed(cpu: ARM7CPU): u32 {
 @unmanaged class MultipleAddrOutput {
     startAddress: u32;
     endAddress: u32;
+    orginalRn: u32;
+    rn: u32;
 }
 
-const multiOutput: MultipleAddrOutput = { startAddress: 0, endAddress: 0 };
+const multiOutput: MultipleAddrOutput = { startAddress: 0, endAddress: 0, orginalRn: 0, rn: 0 };
 
 export { MultipleAddrOutput };
 
@@ -503,6 +505,8 @@ export function ldmIncrAfter(cpu: ARM7CPU): MultipleAddrOutput {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
+    multiOutput.orginalRn = rnVal;
+    multiOutput.rn = rn;
     let registerList = getBits(instruction, 15, 0);
     let startAddress = rnVal;
     let endAddress = rnVal + (countSetBits(registerList) * 4) - 4
@@ -520,6 +524,8 @@ export function ldmIncrBefore(cpu: ARM7CPU): MultipleAddrOutput {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
+    multiOutput.orginalRn = rnVal;
+    multiOutput.rn = rn;
     let registerList = getBits(instruction, 15, 0);
     let startAddress = rnVal + 4;
     let endAddress = rnVal + (countSetBits(registerList) * 4)
@@ -535,6 +541,8 @@ export function ldmDecrAfter(cpu: ARM7CPU): MultipleAddrOutput {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
+    multiOutput.orginalRn = rnVal;
+    multiOutput.rn = rn;
     let registerList = getBits(instruction, 15, 0);
     let startAddress = rnVal - (countSetBits(registerList) * 4) + 4
     let endAddress = rnVal;
@@ -552,6 +560,8 @@ export function ldmDecrBefor(cpu: ARM7CPU): MultipleAddrOutput {
     let instruction = cpu.currentInstruction;
     let rn = getBits(instruction, 19, 16);
     let rnVal = cpu.readRegister(rn);
+    multiOutput.orginalRn = rnVal;
+    multiOutput.rn = rn;
     let registerList = getBits(instruction, 15, 0);
     let startAddress = rnVal - (countSetBits(registerList) * 4);
     let endAddress = rnVal - 4;
