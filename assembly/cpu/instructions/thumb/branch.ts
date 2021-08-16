@@ -1,4 +1,4 @@
-import { getBit, getBits, signExtend } from "../../../utils/bits";
+import { signExtend } from "../../../utils/bits";
 import { uAdd } from "../../../utils/math";
 import { ARM7CPU, StatusFlags } from "../../cpu";
 import { testCondition } from "../instructions";
@@ -13,18 +13,11 @@ export function BC(cpu: ARM7CPU): void {
     let instruction = cpu.currentInstruction;
     let targetAddr: u32 = instruction & 0xff;
     // Sign Extension
-    targetAddr <<= 1;
-    targetAddr <<= 24;
-    targetAddr = u32(<i32>targetAddr >> 24);
+    targetAddr = signExtend(targetAddr, 8);
+    targetAddr = targetAddr << 1;
 
     // Math Magic
-    let addr: u32;
-    if (getBit(targetAddr, 31)) {
-        // If target is negative convert it to postive value
-        addr = cpu.readRegister(15) - ((~targetAddr) + 1);
-    } else {
-        addr = cpu.readRegister(15) + targetAddr;
-    }
+    let addr: u32 = uAdd(cpu.readRegister(15), targetAddr);
     cpu.writeRegister(15, addr);
 }
 
@@ -34,18 +27,12 @@ export function B(cpu: ARM7CPU): void {
     let targetAddr: u32 = instruction & 0x7FF;
 
     // Sign extension, you know the drill.
-    targetAddr <<= 1;
-    targetAddr <<= 21;
-    targetAddr = u32(<i32>targetAddr >> 24);
+    targetAddr = signExtend(targetAddr, 11);
+    targetAddr = targetAddr << 1;
 
     // Math Magic
     let addr: u32;
-    if (getBit(targetAddr, 31)) {
-        // If target is negative convert it to postive value
-        addr = cpu.readRegister(15) - ((~targetAddr) + 1);
-    } else {
-        addr = cpu.readRegister(15) + targetAddr;
-    }
+    addr = uAdd(cpu.readRegister(15), targetAddr);
     cpu.writeRegister(15, addr);
 }
 
