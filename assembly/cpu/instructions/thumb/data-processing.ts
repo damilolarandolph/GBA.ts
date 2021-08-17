@@ -90,8 +90,8 @@ function deduceFormat(cpu: ARM7CPU): FormatResult {
         formatResult.format = 8;
         let h1 = (instruction >>> 7) & 0x1;
         let h2 = (instruction >>> 6) & 0x1;
-        let rn = (h1 << 4) | (instruction & 0x7);
-        let rm = (h2 << 4) | ((instruction >>> 3) & 0x7);
+        let rn = (h1 << 3) | (instruction & 0x7);
+        let rm = (h2 << 3) | ((instruction >>> 3) & 0x7);
         formatResult.op1 = cpu.readRegister(rn);
         formatResult.op2 = cpu.readRegister(rm);
         formatResult.destination = rn;
