@@ -1,6 +1,7 @@
 import { Timing } from "../../../memory/timings-map";
 import { countSetBits, getBit, signExtend } from "../../../utils/bits";
 import { ARM7CPU } from "../../cpu";
+import { rotateRight } from "../arm/address-modes";
 
 
 
@@ -30,10 +31,10 @@ function deduceFormat(cpu: ARM7CPU): FormatResult {
     }
 
     else if ((instruction >>> 13) == 0b011) {
-        let shift = getBit(instruction, 12) ? 2 : 0;
         let rB = (instruction >>> 3) & 0x7;
         let offset = (instruction >>> 6) & 0x1f;
-        offset = offset << shift;
+        if (!getBit(instruction, 12))
+            offset = offset << 2
         formatResult.op1 = cpu.readRegister(rB);
         formatResult.op2 = offset;
         formatResult.destination = instruction & 0x7;
@@ -63,11 +64,13 @@ function deduceFormat(cpu: ARM7CPU): FormatResult {
 
 export function LDR(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
-    trace("TLDR");
     cpu.addCycles(1);
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     let address = format.op1 + format.op2
-    cpu.writeRegister(format.destination, cpu.read32(address));
+    let lastBits = u32(address & 0x3);
+    let alignedAddr = address & (~u32(3));
+    let shifterOut = rotateRight(cpu.read32(alignedAddr), 8 * lastBits, cpu);
+    cpu.writeRegister(format.destination, shifterOut.operand);
 }
 
 export function LDRH(cpu: ARM7CPU): void {
@@ -108,7 +111,6 @@ export function LDRSB(cpu: ARM7CPU): void {
 export function STR(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let address: u32 = format.op1 + format.op2;
-    cpu.prefetch();
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write32(address, cpu.readRegister(format.destination));
 }
@@ -116,7 +118,6 @@ export function STR(cpu: ARM7CPU): void {
 export function STRH(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let address = format.op1 + format.op2;
-    cpu.prefetch();
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write16(address, u16(cpu.readRegister(format.destination) & 0xffff));
 }
@@ -124,7 +125,6 @@ export function STRH(cpu: ARM7CPU): void {
 export function STRB(cpu: ARM7CPU): void {
     let format = deduceFormat(cpu);
     let address = format.op1 + format.op2;
-    cpu.prefetch();
     cpu.accessType = Timing.Access.NON_SEQUENTIAL;
     cpu.write8(address, u8(cpu.readRegister(format.destination) & 0xff));
 }
