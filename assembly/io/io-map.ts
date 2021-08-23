@@ -4,34 +4,40 @@ import IODevice from "./io-device";
 export class IOMap implements MemoryMap {
 
     private videoController: IODevice;
+    private keypad: IODevice;
 
-    constructor(videoController: IODevice) {
+    constructor(videoController: IODevice, keypad: IODevice) {
         this.videoController = videoController;
+        this.keypad = keypad;
     }
 
     private getDeviceForAddress(address: u32): IODevice | null {
         if (address >= 0x4000000 && address <= 0x4000056) {
             return this.videoController;
         }
-        trace("UNKNOWN IO DEVICE AT ADDRESS", 1, address);
+
+        if (address >= 0x4000130 && address <= 0x4000132) {
+            return this.keypad;
+        }
         return null;
     }
     read32(address: u32,): u32 {
         let device = this.getDeviceForAddress(address);
         if (!device) {
-            return 0;
+            return 1;
         }
         let val: u32 = (u32(device.readIO(address + 3)) << 24)
             | (u32(device.readIO(address + 2)) << 16)
             | (u32(device.readIO(address + 1)) << 8)
             | (u32(device.readIO(address)))
+
         return val;
     }
 
     read16(address: u32,): u16 {
         let device = this.getDeviceForAddress(address);
         if (!device) {
-            return 0;
+            return 1;
         }
         let val: u16 = (u16(device.readIO(address + 1)) << 8)
             | (u16(device.readIO(address)))
@@ -41,7 +47,7 @@ export class IOMap implements MemoryMap {
     read8(address: u32,): u8 {
         let device = this.getDeviceForAddress(address);
         if (!device) {
-            return 0;
+            return 1;
         }
 
         return device.readIO(address);
